@@ -229,10 +229,155 @@
             transform: translateY(-2px);
         }
 
+        .action-button:active {
+            transform: scale(0.98);
+        }
+
         .action-button.secondary {
             background: white;
             color: #667eea;
             border: 2px solid #667eea;
+        }
+
+        .action-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* News Feed Styles */
+        .news-feed {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .news-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 6px 15px;
+            background: #f0f0f0;
+            border: 2px solid transparent;
+            border-radius: 15px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .news-count {
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .news-item {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid #e0e0e0;
+        }
+
+        .news-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .news-item.high {
+            border-left-color: #f5576c;
+        }
+
+        .news-item.medium {
+            border-left-color: #fcb69f;
+        }
+
+        .news-item.low {
+            border-left-color: #a8edea;
+        }
+
+        .news-title {
+            font-weight: bold;
+            font-size: 15px;
+            margin-bottom: 8px;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .news-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .news-source {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .news-relevance {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mini-score {
+            font-weight: bold;
+            font-size: 14px;
+            color: #667eea;
+        }
+
+        .mini-bar {
+            width: 60px;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .mini-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .chat-input-container {
@@ -349,6 +494,11 @@
             .message-content, .relevance-card, .profile-summary {
                 max-width: 95%;
             }
+
+            .news-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
@@ -383,13 +533,40 @@
         const STATE = {
             ONBOARDING: 'onboarding',
             READY: 'ready',
-            ANALYZING: 'analyzing'
+            ANALYZING: 'analyzing',
+            NEWS_FEED: 'news_feed'
         };
 
         let currentState = STATE.ONBOARDING;
         let onboardingStep = 0;
         let userProfile = {};
         let currentQuestion = null;
+        let newsDatabase = [];
+        let currentFilter = 'all';
+
+        // Demo News Database (Deutsche Nachrichten)
+        const demoNews = [
+            { title: 'Mietpreisbremse: Bundesregierung verschärft Regelungen für Vermieter', source: 'Tagesschau', category: 'Wohnen' },
+            { title: 'Neue Grundsteuer-Reform tritt 2025 in Kraft - Das müssen Hausbesitzer wissen', source: 'FAZ', category: 'Wohnen' },
+            { title: 'Bundestag beschließt höheres Kindergeld ab Januar', source: 'Spiegel', category: 'Familie' },
+            { title: 'Elektroauto-Förderung wird verlängert: Bis zu 9.000 Euro Prämie', source: 'Süddeutsche', category: 'Auto' },
+            { title: 'Berlin: Neue U-Bahn-Linie nach Tegel genehmigt', source: 'Berliner Morgenpost', category: 'Verkehr' },
+            { title: 'München führt City-Maut für Innenstadtbereich ein', source: 'BR', category: 'Verkehr' },
+            { title: 'Klimapaket: CO2-Steuer steigt ab 2025 deutlich', source: 'Zeit Online', category: 'Umwelt' },
+            { title: 'Rente mit 67: Gewerkschaften fordern Rücknahme der Reform', source: 'taz', category: 'Altersvorsorge' },
+            { title: 'Digitalisierung: Schulen erhalten 500 Millionen für IT-Ausstattung', source: 'Handelsblatt', category: 'Bildung' },
+            { title: 'Gesundheitsreform: Krankenkassenbeiträge steigen 2025', source: 'NDR', category: 'Gesundheit' },
+            { title: 'Deutsche Wirtschaft: Rezession befürchtet für nächstes Quartal', source: 'Wirtschaftswoche', category: 'Wirtschaft' },
+            { title: 'Tech-Branche boomt: 50.000 neue IT-Jobs in Deutschland', source: 'Heise', category: 'Technologie' },
+            { title: 'Benzinpreis erreicht Rekordstand von 2,15 Euro pro Liter', source: 'ADAC', category: 'Auto' },
+            { title: 'Hamburg: Mietpreise steigen um durchschnittlich 8% im letzten Jahr', source: 'Hamburg Journal', category: 'Wohnen' },
+            { title: 'Pflegereform: Mehr Unterstützung für Angehörige beschlossen', source: 'SWR', category: 'Gesundheit' },
+            { title: 'Studie: Jeder dritte Deutsche sorgt sich um Arbeitsplatzsicherheit', source: 'Deutschlandfunk', category: 'Wirtschaft' },
+            { title: 'Kita-Plätze: Rechtsanspruch wird ab 2025 ausgeweitet', source: 'WDR', category: 'Familie' },
+            { title: 'Homeoffice-Pflicht: Arbeitgeber müssen mindestens 2 Tage ermöglichen', source: 'Frankfurter Rundschau', category: 'Arbeit' },
+            { title: 'Sportwagen-Hersteller Porsche plant Umstieg auf reine Elektroflotte', source: 'Auto Motor Sport', category: 'Auto' },
+            { title: 'Universitäten: Studiengebühren für Nicht-EU-Bürger eingeführt', source: 'Uni Spiegel', category: 'Bildung' }
+        ];
 
         // Onboarding Questions
         const onboardingQuestions = [
@@ -604,8 +781,18 @@
                 setTimeout(() => {
                     showProfileSummary();
                     setTimeout(() => {
-                        addMessage('Jetzt kannst du mir Nachrichten oder Schlagzeilen schicken, und ich analysiere, wie relevant sie für dich persönlich sind! 📰');
-                        chatInput.placeholder = 'Füge eine Nachricht oder Schlagzeile ein...';
+                        addMessage('Du hast zwei Möglichkeiten:\n\n1️⃣ Lass mich aktuelle Nachrichten für dich laden und bewerten\n2️⃣ Oder füge eine eigene Nachricht ein, die ich analysiere');
+
+                        const buttons = `
+                            <div class="profile-summary" style="background: white; color: #333;">
+                                <div class="button-group" style="margin-top: 0;">
+                                    <button class="action-button" onclick="loadNewsForUser()">📰 Nachrichten laden</button>
+                                    <button class="action-button secondary" onclick="showProfile()">👤 Profil anzeigen</button>
+                                </div>
+                            </div>
+                        `;
+                        addSpecialMessage(buttons);
+                        chatInput.placeholder = 'Oder füge eine eigene Nachricht ein...';
                     }, 1000);
                 }, 1000);
             }, 800);
@@ -635,9 +822,18 @@
         }
 
         function showWelcomeBack() {
-            addMessage(`Willkommen zurück, ${userProfile.name}! 👋\n\nIch bin bereit, Nachrichten für dich zu analysieren. Schicke mir einfach eine Nachricht oder Schlagzeile!`);
-            showProfileSummary();
-            chatInput.placeholder = 'Füge eine Nachricht oder Schlagzeile ein...';
+            addMessage(`Willkommen zurück, ${userProfile.name}! 👋`);
+
+            const buttons = `
+                <div class="profile-summary" style="background: white; color: #333;">
+                    <div class="button-group" style="margin-top: 0;">
+                        <button class="action-button" onclick="loadNewsForUser()">📰 Nachrichten laden</button>
+                        <button class="action-button secondary" onclick="showProfile()">👤 Profil anzeigen</button>
+                    </div>
+                </div>
+            `;
+            addSpecialMessage(buttons);
+            chatInput.placeholder = 'Oder füge eine eigene Nachricht ein...';
         }
 
         function showProfile() {
@@ -667,6 +863,118 @@
             sendMessage();
         }
 
+        // News Loading
+        function loadNewsForUser() {
+            currentState = STATE.NEWS_FEED;
+
+            addMessage('📰 Nachrichten laden...', true);
+
+            showTypingIndicator();
+
+            setTimeout(() => {
+                removeTypingIndicator();
+                loadDemoNews();
+            }, 1500);
+        }
+
+        function loadDemoNews() {
+            addMessage(`Ich habe ${demoNews.length} aktuelle Nachrichten gefunden und bewerte sie jetzt nach deinem persönlichen Profil... ⚡`);
+
+            showTypingIndicator();
+
+            setTimeout(() => {
+                removeTypingIndicator();
+                newsDatabase = demoNews.map(news => ({
+                    ...news,
+                    analysis: generateRelevanceAnalysis(news.title)
+                }));
+
+                // Sort by relevance
+                newsDatabase.sort((a, b) => b.analysis.score - a.analysis.score);
+
+                displayNewsFeed();
+                currentState = STATE.READY;
+            }, 2000);
+        }
+
+        function displayNewsFeed() {
+            const highRelevance = newsDatabase.filter(n => n.analysis.score >= 70).length;
+            const medRelevance = newsDatabase.filter(n => n.analysis.score >= 40 && n.analysis.score < 70).length;
+            const lowRelevance = newsDatabase.filter(n => n.analysis.score < 40).length;
+
+            addMessage(`✅ Analyse abgeschlossen!\n\n🔴 Sehr relevant: ${highRelevance}\n🟠 Mittlere Relevanz: ${medRelevance}\n🔵 Geringe Relevanz: ${lowRelevance}`);
+
+            const feedHTML = `
+                <div class="news-feed">
+                    <div class="news-controls">
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" onclick="filterNews('all')">Alle (${newsDatabase.length})</button>
+                            <button class="filter-btn" onclick="filterNews('high')">Sehr relevant (${highRelevance})</button>
+                            <button class="filter-btn" onclick="filterNews('medium')">Mittel (${medRelevance})</button>
+                            <button class="filter-btn" onclick="filterNews('low')">Gering (${lowRelevance})</button>
+                        </div>
+                    </div>
+                    <div id="newsList">
+                        ${renderNewsList(newsDatabase)}
+                    </div>
+                </div>
+            `;
+
+            addSpecialMessage(feedHTML);
+        }
+
+        function renderNewsList(news) {
+            return news.map((item, index) => {
+                const scoreClass = item.analysis.score >= 70 ? 'high' : (item.analysis.score >= 40 ? 'medium' : 'low');
+                const barClass = item.analysis.score >= 70 ? 'high' : (item.analysis.score >= 40 ? 'medium' : 'low');
+
+                return `
+                    <div class="news-item ${scoreClass}" onclick="showNewsDetails(${index})">
+                        <div class="news-title">${item.title}</div>
+                        <div class="news-meta">
+                            <span class="news-source">📍 ${item.source}</span>
+                            <div class="news-relevance">
+                                <span class="mini-score">${item.analysis.score}%</span>
+                                <div class="mini-bar">
+                                    <div class="mini-bar-fill score-fill ${barClass}" style="width: ${item.analysis.score}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterNews(filter) {
+            currentFilter = filter;
+
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            let filtered = newsDatabase;
+
+            if (filter === 'high') {
+                filtered = newsDatabase.filter(n => n.analysis.score >= 70);
+            } else if (filter === 'medium') {
+                filtered = newsDatabase.filter(n => n.analysis.score >= 40 && n.analysis.score < 70);
+            } else if (filter === 'low') {
+                filtered = newsDatabase.filter(n => n.analysis.score < 40);
+            }
+
+            const newsList = document.getElementById('newsList');
+            if (newsList) {
+                newsList.innerHTML = renderNewsList(filtered);
+            }
+        }
+
+        function showNewsDetails(index) {
+            const news = newsDatabase[index];
+            displayRelevanceAnalysis(news.analysis, news.title);
+        }
+
         // News Analysis
         function analyzeNews(newsText) {
             currentState = STATE.ANALYZING;
@@ -677,7 +985,7 @@
                 removeTypingIndicator();
 
                 const analysis = generateRelevanceAnalysis(newsText);
-                displayRelevanceAnalysis(analysis);
+                displayRelevanceAnalysis(analysis, newsText);
 
                 currentState = STATE.READY;
             }, 1500 + Math.random() * 1000);
@@ -827,11 +1135,12 @@
             return analysis;
         }
 
-        function displayRelevanceAnalysis(analysis) {
+        function displayRelevanceAnalysis(analysis, newsTitle = null) {
             const scoreClass = analysis.score >= 70 ? 'high' : (analysis.score >= 40 ? 'medium' : 'low');
 
             const card = `
                 <div class="relevance-card">
+                    ${newsTitle ? `<div style="font-size: 14px; color: #666; margin-bottom: 10px; line-height: 1.4;">${newsTitle}</div>` : ''}
                     <div class="relevance-header">🎯 Relevanz-Analyse</div>
 
                     <div class="relevance-score">
