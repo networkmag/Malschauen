@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot - Malschauen</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            height: 90vh;
+            max-height: 700px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: #f5f5f5;
+        }
+
+        .message {
+            display: flex;
+            align-items: flex-start;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-input-container {
+            display: flex;
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-button {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-button:active {
+            transform: translateY(0);
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 5px;
+            padding: 12px 18px;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #999;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 20px;
+            background: #f9f9f9;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .suggestion-chip {
+            padding: 8px 15px;
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .suggestion-chip:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 600px) {
+            .chat-container {
+                height: 100vh;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+
+            .message-content {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            🤖 Malschauen Chatbot
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot">
+                <div class="message-content">
+                    Hallo! Ich bin dein virtueller Assistent. Wie kann ich dir heute helfen?
+                </div>
+            </div>
+        </div>
+
+        <div class="suggestions" id="suggestions">
+            <div class="suggestion-chip" onclick="sendSuggestion('Hallo')">👋 Hallo</div>
+            <div class="suggestion-chip" onclick="sendSuggestion('Was kannst du?')">❓ Was kannst du?</div>
+            <div class="suggestion-chip" onclick="sendSuggestion('Hilfe')">💡 Hilfe</div>
+        </div>
+
+        <div class="chat-input-container">
+            <input
+                type="text"
+                class="chat-input"
+                id="chatInput"
+                placeholder="Schreibe eine Nachricht..."
+                onkeypress="handleKeyPress(event)"
+            >
+            <button class="send-button" onclick="sendMessage()">Senden</button>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+
+        // Chatbot-Antworten
+        const responses = {
+            'hallo': 'Hallo! Schön, dich zu sehen! 😊',
+            'hi': 'Hi! Wie geht es dir?',
+            'hey': 'Hey! Was kann ich für dich tun?',
+            'guten tag': 'Guten Tag! Wie kann ich dir helfen?',
+            'guten morgen': 'Guten Morgen! Ich hoffe, du hattest einen guten Start in den Tag! ☀️',
+            'guten abend': 'Guten Abend! Schön, dass du hier bist! 🌙',
+
+            'wie geht es dir': 'Mir geht es großartig, danke! Und dir? 😊',
+            'wie gehts': 'Mir geht es super! Und dir?',
+
+            'was kannst du': 'Ich kann dir bei verschiedenen Fragen helfen! Du kannst mich nach dem Wetter fragen, nach Tipps, oder einfach mit mir plaudern. Was interessiert dich?',
+            'was bist du': 'Ich bin ein freundlicher Chatbot, entwickelt um dir zu helfen und Fragen zu beantworten!',
+            'wer bist du': 'Ich bin der Malschauen Chatbot - dein virtueller Assistent! 🤖',
+
+            'hilfe': 'Natürlich helfe ich dir gerne! Du kannst mich nach vielen Dingen fragen:\n• Grüße (Hallo, Hi)\n• Wie es mir geht\n• Was ich kann\n• Witze\n• Tipps\n• Oder einfach mit mir plaudern!',
+
+            'wetter': 'Ich habe leider keinen Zugriff auf Wetterdaten. Schau am besten bei einem Wetterdienst nach! ☁️',
+            'wie wird das wetter': 'Für aktuelle Wetterinformationen empfehle ich dir wetter.de oder eine Wetter-App! 🌤️',
+
+            'danke': 'Gerne! Wenn du noch Fragen hast, bin ich für dich da! 😊',
+            'dankeschön': 'Sehr gerne! Es freut mich, dir helfen zu können! 💙',
+
+            'tschüss': 'Tschüss! Bis bald! 👋',
+            'bye': 'Auf Wiedersehen! Komm bald wieder! 😊',
+            'ciao': 'Ciao! Bis zum nächsten Mal! 🌟',
+
+            'witz': 'Was macht ein Pirat am Computer? Er drückt die Enter-Taste! 😄',
+            'erzähl einen witz': 'Warum können Piraten keine Kreise zeichnen? Weil sie nur Pi-raten! 🏴‍☠️',
+
+            'name': 'Ich bin der Malschauen Chatbot! Du kannst mich einfach Bot nennen. 😊',
+            'wie heißt du': 'Ich heiße Malschauen Bot! Freut mich, dich kennenzulernen!',
+
+            'alter': 'Ich bin zeitlos! Als KI habe ich kein wirkliches Alter. 🤖',
+            'wie alt bist du': 'Ich wurde gerade erst erschaffen, bin aber voller Energie! ⚡',
+
+            'tipp': 'Hier ist ein Tipp: Bleib neugierig und lerne jeden Tag etwas Neues! 📚',
+            'ratschlag': 'Ein guter Ratschlag: Sei freundlich zu dir selbst und anderen. Das macht die Welt besser! 🌍',
+
+            'zeit': `Es ist jetzt ${new Date().toLocaleTimeString('de-DE')} Uhr! ⏰`,
+            'uhrzeit': `Die aktuelle Uhrzeit ist ${new Date().toLocaleTimeString('de-DE')} Uhr! 🕐`,
+
+            'datum': `Heute ist der ${new Date().toLocaleDateString('de-DE')}! 📅`,
+
+            'ja': 'Freut mich! Gibt es noch etwas, womit ich dir helfen kann?',
+            'nein': 'Okay! Wenn du später Fragen hast, bin ich hier! 😊',
+
+            'cool': 'Danke! Du bist auch cool! 😎',
+            'toll': 'Das freut mich zu hören! 🎉',
+            'super': 'Super! Wie kann ich dir weiterhelfen? 🌟'
+        };
+
+        function findBestResponse(message) {
+            const lowerMessage = message.toLowerCase().trim();
+
+            // Exakte Übereinstimmung
+            if (responses[lowerMessage]) {
+                return responses[lowerMessage];
+            }
+
+            // Teilstring-Übereinstimmung
+            for (let key in responses) {
+                if (lowerMessage.includes(key)) {
+                    return responses[key];
+                }
+            }
+
+            // Fallback-Antworten
+            const fallbacks = [
+                'Das ist interessant! Erzähl mir mehr darüber. 🤔',
+                'Interessante Frage! Kannst du das näher erläutern?',
+                'Hmm, darüber habe ich noch nicht nachgedacht. Was meinst du genau?',
+                'Das ist ein guter Punkt! Möchtest du mehr darüber wissen?',
+                'Ich verstehe. Lass mich darüber nachdenken... 🤓',
+                'Entschuldige, ich bin mir nicht ganz sicher, wie ich darauf antworten soll. Kannst du die Frage anders formulieren?'
+            ];
+
+            return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        }
+
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = content;
+
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+
+            // Scroll nach unten
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot';
+            typingDiv.id = 'typing-indicator';
+
+            const indicatorDiv = document.createElement('div');
+            indicatorDiv.className = 'typing-indicator';
+            indicatorDiv.innerHTML = '<span></span><span></span><span></span>';
+
+            typingDiv.appendChild(indicatorDiv);
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        function sendMessage() {
+            const message = chatInput.value.trim();
+
+            if (message === '') return;
+
+            // Benutzer-Nachricht hinzufügen
+            addMessage(message, true);
+            chatInput.value = '';
+
+            // Typing-Indikator anzeigen
+            showTypingIndicator();
+
+            // Bot-Antwort nach kurzer Verzögerung
+            setTimeout(() => {
+                removeTypingIndicator();
+                const response = findBestResponse(message);
+                addMessage(response, false);
+            }, 500 + Math.random() * 1000); // Zufällige Verzögerung zwischen 0.5-1.5 Sekunden
+        }
+
+        function sendSuggestion(text) {
+            chatInput.value = text;
+            sendMessage();
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Auto-Focus auf Input beim Laden
+        window.onload = () => {
+            chatInput.focus();
+        };
+    </script>
+</body>
+</html>
