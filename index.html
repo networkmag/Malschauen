@@ -1045,18 +1045,125 @@
         function loadNewsForUser() {
             currentState = STATE.NEWS_FEED;
 
-            addMessage('📰 Nachrichten laden...', true);
+            addMessage('📰 Lade aktuelle Nachrichten vom Bayerischen Rundfunk...', true);
+
+            showTypingIndicator();
+
+            // Try to load RSS feed, fallback to demo news
+            fetchBRNews()
+                .then(news => {
+                    if (news && news.length > 0) {
+                        removeTypingIndicator();
+                        processNews(news);
+                    } else {
+                        removeTypingIndicator();
+                        addMessage('⚠️ RSS-Feed konnte nicht geladen werden. Verwende Demo-Nachrichten...');
+                        setTimeout(() => loadDemoNews(), 1000);
+                    }
+                })
+                .catch(error => {
+                    console.error('RSS Feed Error:', error);
+                    removeTypingIndicator();
+                    addMessage('⚠️ Fehler beim Laden der Live-News. Verwende Demo-Nachrichten...');
+                    setTimeout(() => loadDemoNews(), 1000);
+                });
+        }
+
+        async function fetchBRNews() {
+            try {
+                // BR RSS Feeds
+                const rssFeeds = [
+                    'https://www.br.de/nachrichten/index.rss',
+                    'https://www.br.de/nachrichten/bayern/index.rss',
+                    'https://www.br.de/nachrichten/deutschland-welt/index.rss'
+                ];
+
+                // Use CORS proxy
+                const corsProxy = 'https://api.allorigins.win/raw?url=';
+
+                // Fetch all feeds
+                const feedPromises = rssFeeds.map(feedUrl =>
+                    fetch(corsProxy + encodeURIComponent(feedUrl))
+                        .then(response => response.text())
+                        .catch(err => {
+                            console.error('Feed error:', err);
+                            return null;
+                        })
+                );
+
+                const feedTexts = await Promise.all(feedPromises);
+                const allNews = [];
+
+                // Parse each feed
+                feedTexts.forEach((feedText, index) => {
+                    if (!feedText) return;
+
+                    try {
+                        const parser = new DOMParser();
+                        const xmlDoc = parser.parseFromString(feedText, 'text/xml');
+
+                        const items = xmlDoc.querySelectorAll('item');
+
+                        items.forEach(item => {
+                            const title = item.querySelector('title')?.textContent || '';
+                            const description = item.querySelector('description')?.textContent || '';
+                            const link = item.querySelector('link')?.textContent || '';
+                            const pubDate = item.querySelector('pubDate')?.textContent || '';
+
+                            // Extract category from feed index
+                            const categories = ['Allgemein', 'Bayern', 'Deutschland & Welt'];
+                            const category = categories[index] || 'Nachrichten';
+
+                            if (title) {
+                                allNews.push({
+                                    title: title.trim(),
+                                    description: description.trim(),
+                                    source: 'BR',
+                                    category: category,
+                                    link: link,
+                                    pubDate: pubDate
+                                });
+                            }
+                        });
+                    } catch (parseError) {
+                        console.error('Parse error:', parseError);
+                    }
+                });
+
+                // Return max 60 news items (most recent)
+                return allNews.slice(0, 60);
+
+            } catch (error) {
+                console.error('Fetch BR News Error:', error);
+                return null;
+            }
+        }
+
+        function processNews(news) {
+            addMessage(`Ich habe ${news.length} aktuelle BR-Nachrichten gefunden und bewerte sie jetzt nach deinem persönlichen Profil... ⚡`);
 
             showTypingIndicator();
 
             setTimeout(() => {
                 removeTypingIndicator();
-                loadDemoNews();
-            }, 1500);
+
+                // Analyze news with both title and description for better matching
+                newsDatabase = news.map(newsItem => ({
+                    ...newsItem,
+                    analysis: generateRelevanceAnalysis(newsItem.title + ' ' + newsItem.description)
+                }))
+                .filter(newsItem => newsItem.analysis.score > 0); // Filter out 0% relevance
+
+                // Sort by relevance
+                newsDatabase.sort((a, b) => b.analysis.score - a.analysis.score);
+
+                displayNewsFeed();
+                currentState = STATE.READY;
+            }, 2000);
         }
 
         function loadDemoNews() {
-            addMessage(`Ich habe ${demoNews.length} aktuelle Nachrichten gefunden und bewerte sie jetzt nach deinem persönlichen Profil... ⚡`);
+            addMessage(`Ich habe ${demoNews.length} Demo-Nachrichten gefunden und bewerte sie jetzt nach deinem persönlichen Profil... ⚡`);
 
             showTypingIndicator();
 
