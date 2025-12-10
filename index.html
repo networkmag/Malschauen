@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Malschauen - Persönlicher Nachrichten-Relevanz-Analyser</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 700px;
+            height: 90vh;
+            max-height: 800px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .header-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            width: 100%;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: white;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: #f5f5f5;
+        }
+
+        .message {
+            display: flex;
+            align-items: flex-start;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 75%;
+            padding: 14px 18px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .relevance-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            max-width: 85%;
+        }
+
+        .relevance-header {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .relevance-score {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .score-bar {
+            flex: 1;
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.5s ease;
+        }
+
+        .score-fill.high {
+            background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .score-fill.medium {
+            background: linear-gradient(90deg, #ffecd2 0%, #fcb69f 100%);
+        }
+
+        .score-fill.low {
+            background: linear-gradient(90deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .score-label {
+            font-weight: bold;
+            min-width: 50px;
+        }
+
+        .relevance-reasons {
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .relevance-reasons ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .relevance-reasons li {
+            margin: 5px 0;
+        }
+
+        .profile-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 10px 0;
+            font-size: 14px;
+            line-height: 1.8;
+            max-width: 85%;
+        }
+
+        .profile-summary strong {
+            display: inline-block;
+            min-width: 120px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .action-button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .action-button:active {
+            transform: scale(0.98);
+        }
+
+        .action-button.secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .action-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* News Feed Styles */
+        .news-feed {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .news-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 6px 15px;
+            background: #f0f0f0;
+            border: 2px solid transparent;
+            border-radius: 15px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .news-count {
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .news-item {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid #e0e0e0;
+        }
+
+        .news-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .news-item.high {
+            border-left-color: #f5576c;
+        }
+
+        .news-item.medium {
+            border-left-color: #fcb69f;
+        }
+
+        .news-item.low {
+            border-left-color: #a8edea;
+        }
+
+        .news-title {
+            font-weight: bold;
+            font-size: 15px;
+            margin-bottom: 8px;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .news-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .news-source {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .news-relevance {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mini-score {
+            font-weight: bold;
+            font-size: 14px;
+            color: #667eea;
+        }
+
+        .mini-bar {
+            width: 60px;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .mini-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .chat-input-container {
+            display: flex;
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-button {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-button:active {
+            transform: translateY(0);
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 5px;
+            padding: 12px 18px;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #999;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        .quick-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 20px;
+            background: #f9f9f9;
+            border-top: 1px solid #e0e0e0;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .option-chip {
+            padding: 8px 15px;
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .option-chip:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 600px) {
+            .chat-container {
+                height: 100vh;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+
+            .message-content, .relevance-card, .profile-summary {
+                max-width: 95%;
+            }
+
+            .news-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="header-title">📰 Malschauen</div>
+            <div class="header-subtitle">Persönlicher Nachrichten-Relevanz-Analyser</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages"></div>
+
+        <div class="quick-options" id="quickOptions" style="display: none;"></div>
+
+        <div class="chat-input-container">
+            <input
+                type="text"
+                class="chat-input"
+                id="chatInput"
+                placeholder="Deine Antwort..."
+                onkeypress="handleKeyPress(event)"
+            >
+            <button class="send-button" onclick="sendMessage()">Senden</button>
+        </div>
+    </div>
+
+    <script>
+        // State Management
+        const STATE = {
+            ONBOARDING: 'onboarding',
+            READY: 'ready',
+            ANALYZING: 'analyzing',
+            NEWS_FEED: 'news_feed'
+        };
+
+        let currentState = STATE.ONBOARDING;
+        let onboardingStep = 0;
+        let userProfile = {};
+        let currentQuestion = null;
+        let newsDatabase = [];
+        let currentFilter = 'all';
+
+        // Demo News Database (Deutsche Nachrichten)
+        const demoNews = [
+            { title: 'Mietpreisbremse: Bundesregierung verschärft Regelungen für Vermieter', source: 'Tagesschau', category: 'Wohnen' },
+            { title: 'Neue Grundsteuer-Reform tritt 2025 in Kraft - Das müssen Hausbesitzer wissen', source: 'FAZ', category: 'Wohnen' },
+            { title: 'Bundestag beschließt höheres Kindergeld ab Januar', source: 'Spiegel', category: 'Familie' },
+            { title: 'Elektroauto-Förderung wird verlängert: Bis zu 9.000 Euro Prämie', source: 'Süddeutsche', category: 'Auto' },
+            { title: 'Berlin: Neue U-Bahn-Linie nach Tegel genehmigt', source: 'Berliner Morgenpost', category: 'Verkehr' },
+            { title: 'München führt City-Maut für Innenstadtbereich ein', source: 'BR', category: 'Verkehr' },
+            { title: 'Klimapaket: CO2-Steuer steigt ab 2025 deutlich', source: 'Zeit Online', category: 'Umwelt' },
+            { title: 'Rente mit 67: Gewerkschaften fordern Rücknahme der Reform', source: 'taz', category: 'Altersvorsorge' },
+            { title: 'Digitalisierung: Schulen erhalten 500 Millionen für IT-Ausstattung', source: 'Handelsblatt', category: 'Bildung' },
+            { title: 'Gesundheitsreform: Krankenkassenbeiträge steigen 2025', source: 'NDR', category: 'Gesundheit' },
+            { title: 'Deutsche Wirtschaft: Rezession befürchtet für nächstes Quartal', source: 'Wirtschaftswoche', category: 'Wirtschaft' },
+            { title: 'Tech-Branche boomt: 50.000 neue IT-Jobs in Deutschland', source: 'Heise', category: 'Technologie' },
+            { title: 'Benzinpreis erreicht Rekordstand von 2,15 Euro pro Liter', source: 'ADAC', category: 'Auto' },
+            { title: 'Hamburg: Mietpreise steigen um durchschnittlich 8% im letzten Jahr', source: 'Hamburg Journal', category: 'Wohnen' },
+            { title: 'Pflegereform: Mehr Unterstützung für Angehörige beschlossen', source: 'SWR', category: 'Gesundheit' },
+            { title: 'Studie: Jeder dritte Deutsche sorgt sich um Arbeitsplatzsicherheit', source: 'Deutschlandfunk', category: 'Wirtschaft' },
+            { title: 'Kita-Plätze: Rechtsanspruch wird ab 2025 ausgeweitet', source: 'WDR', category: 'Familie' },
+            { title: 'Homeoffice-Pflicht: Arbeitgeber müssen mindestens 2 Tage ermöglichen', source: 'Frankfurter Rundschau', category: 'Arbeit' },
+            { title: 'Sportwagen-Hersteller Porsche plant Umstieg auf reine Elektroflotte', source: 'Auto Motor Sport', category: 'Auto' },
+            { title: 'Universitäten: Studiengebühren für Nicht-EU-Bürger eingeführt', source: 'Uni Spiegel', category: 'Bildung' }
+        ];
+
+        // Onboarding Questions
+        const onboardingQuestions = [
+            {
+                id: 'name',
+                question: 'Willkommen! 👋\n\nIch bin dein persönlicher Nachrichten-Relevanz-Analyser. Ich helfe dir zu verstehen, wie Weltnachrichten dich persönlich betreffen.\n\nLass uns zunächst dein Profil erstellen.\n\nWie heißt du?',
+                type: 'text'
+            },
+            {
+                id: 'age',
+                question: 'Schön, dich kennenzulernen, {name}! 😊\n\nWie alt bist du?',
+                type: 'number',
+                options: ['18-25', '26-35', '36-45', '46-55', '56-65', '66+']
+            },
+            {
+                id: 'gender',
+                question: 'Geschlecht?',
+                type: 'choice',
+                options: ['Männlich', 'Weiblich']
+            },
+            {
+                id: 'location',
+                question: 'In welcher Stadt oder Region wohnst du?',
+                type: 'text'
+            },
+            {
+                id: 'job',
+                question: 'Was ist dein Beruf bzw. deine Branche?',
+                type: 'text'
+            },
+            {
+                id: 'familyStatus',
+                question: 'Wie ist dein Familienstand?',
+                type: 'choice',
+                options: ['Single', 'In einer Beziehung', 'Verheiratet', 'Geschieden', 'Verwitwet']
+            },
+            {
+                id: 'children',
+                question: 'Hast du Kinder? Wenn ja, wie viele?',
+                type: 'number',
+                options: ['0', '1', '2', '3', '4+']
+            },
+            {
+                id: 'housing',
+                question: 'Wie wohnst du?',
+                type: 'choice',
+                options: ['Mietwohnung', 'Eigentumswohnung', 'Miethaus', 'Eigenheim']
+            },
+            {
+                id: 'car',
+                question: 'Besitzt du ein Auto?',
+                type: 'choice',
+                options: ['Ja, Verbrenner', 'Ja, Elektroauto', 'Ja, Hybrid', 'Nein']
+            },
+            {
+                id: 'interests',
+                question: 'Was sind deine wichtigsten Interessen? (Mehrere möglich, mit Komma getrennt)\n\nZ.B.: Politik, Wirtschaft, Technologie, Sport, Kultur, Gesundheit, Umwelt, etc.',
+                type: 'text'
+            },
+            {
+                id: 'concerns',
+                question: 'Welche Themen bereiten dir besonders Sorgen oder sind dir wichtig? (Mehrere möglich, mit Komma getrennt)\n\nZ.B.: Klimawandel, Wirtschaft, Gesundheit, Bildung, Altersvorsorge, etc.',
+                type: 'text'
+            }
+        ];
+
+        // DOM Elements
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const quickOptions = document.getElementById('quickOptions');
+        const progressFill = document.getElementById('progressFill');
+
+        // Initialize
+        function init() {
+            loadProfile();
+            if (Object.keys(userProfile).length === 0) {
+                startOnboarding();
+            } else {
+                currentState = STATE.READY;
+                showWelcomeBack();
+            }
+        }
+
+        // LocalStorage Management
+        function saveProfile() {
+            localStorage.setItem('malschauen_profile', JSON.stringify(userProfile));
+        }
+
+        function loadProfile() {
+            const saved = localStorage.getItem('malschauen_profile');
+            if (saved) {
+                userProfile = JSON.parse(saved);
+            }
+        }
+
+        function resetProfile() {
+            localStorage.removeItem('malschauen_profile');
+            userProfile = {};
+            onboardingStep = 0;
+            clearMessages();
+            startOnboarding();
+        }
+
+        // Message Functions
+        function addMessage(content, isUser = false, isSpecial = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+
+            if (isSpecial) {
+                messageDiv.innerHTML = content;
+            } else {
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.textContent = content;
+                messageDiv.appendChild(contentDiv);
+            }
+
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function addSpecialMessage(htmlContent) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+            messageDiv.innerHTML = htmlContent;
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function clearMessages() {
+            chatMessages.innerHTML = '';
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot';
+            typingDiv.id = 'typing-indicator';
+            typingDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+            chatMessages.appendChild(typingDiv);
+            scrollToBottom();
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) indicator.remove();
+        }
+
+        // Onboarding Flow
+        function startOnboarding() {
+            currentState = STATE.ONBOARDING;
+            onboardingStep = 0;
+            askNextQuestion();
+        }
+
+        function askNextQuestion() {
+            if (onboardingStep >= onboardingQuestions.length) {
+                completeOnboarding();
+                return;
+            }
+
+            currentQuestion = onboardingQuestions[onboardingStep];
+
+            // Update progress
+            const progress = (onboardingStep / onboardingQuestions.length) * 100;
+            progressFill.style.width = progress + '%';
+
+            // Personalize question
+            let questionText = currentQuestion.question;
+            for (let key in userProfile) {
+                questionText = questionText.replace(`{${key}}`, userProfile[key]);
+            }
+
+            showTypingIndicator();
+            setTimeout(() => {
+                removeTypingIndicator();
+                addMessage(questionText);
+
+                // Show quick options if available
+                if (currentQuestion.options) {
+                    showQuickOptions(currentQuestion.options);
+                } else {
+                    hideQuickOptions();
+                }
+            }, 500 + Math.random() * 500);
+        }
+
+        function processAnswer(answer) {
+            if (currentState === STATE.ONBOARDING) {
+                userProfile[currentQuestion.id] = answer;
+                onboardingStep++;
+                saveProfile();
+                askNextQuestion();
+            } else if (currentState === STATE.READY) {
+                analyzeNews(answer);
+            }
+        }
+
+        function completeOnboarding() {
+            progressFill.style.width = '100%';
+            currentState = STATE.READY;
+            hideQuickOptions();
+
+            showTypingIndicator();
+            setTimeout(() => {
+                removeTypingIndicator();
+                addMessage('Perfekt! Dein Profil ist vollständig. 🎉');
+
+                setTimeout(() => {
+                    showProfileSummary();
+                    setTimeout(() => {
+                        addMessage('Du hast zwei Möglichkeiten:\n\n1️⃣ Lass mich aktuelle Nachrichten für dich laden und bewerten\n2️⃣ Oder füge eine eigene Nachricht ein, die ich analysiere');
+
+                        const buttons = `
+                            <div class="profile-summary" style="background: white; color: #333;">
+                                <div class="button-group" style="margin-top: 0;">
+                                    <button class="action-button" onclick="loadNewsForUser()">📰 Nachrichten laden</button>
+                                    <button class="action-button secondary" onclick="showProfile()">👤 Profil anzeigen</button>
+                                </div>
+                            </div>
+                        `;
+                        addSpecialMessage(buttons);
+                        chatInput.placeholder = 'Oder füge eine eigene Nachricht ein...';
+                    }, 1000);
+                }, 1000);
+            }, 800);
+        }
+
+        function showProfileSummary() {
+            const summary = `
+                <div class="profile-summary">
+                    <strong>📋 Dein Profil:</strong><br><br>
+                    <strong>Name:</strong> ${userProfile.name || 'N/A'}<br>
+                    <strong>Alter:</strong> ${userProfile.age || 'N/A'}<br>
+                    <strong>Beruf:</strong> ${userProfile.job || 'N/A'}<br>
+                    <strong>Wohnort:</strong> ${userProfile.location || 'N/A'}<br>
+                    <strong>Familienstand:</strong> ${userProfile.familyStatus || 'N/A'}<br>
+                    <strong>Kinder:</strong> ${userProfile.children || '0'}<br>
+                    <strong>Wohnsituation:</strong> ${userProfile.housing || 'N/A'}<br>
+                    <strong>Auto:</strong> ${userProfile.car || 'N/A'}<br>
+                    <strong>Interessen:</strong> ${userProfile.interests || 'N/A'}<br>
+                    <strong>Wichtige Themen:</strong> ${userProfile.concerns || 'N/A'}
+                    <div class="button-group">
+                        <button class="action-button secondary" onclick="showProfile()">Profil anzeigen</button>
+                        <button class="action-button secondary" onclick="resetProfile()">Profil neu erstellen</button>
+                    </div>
+                </div>
+            `;
+            addSpecialMessage(summary);
+        }
+
+        function showWelcomeBack() {
+            addMessage(`Willkommen zurück, ${userProfile.name}! 👋`);
+
+            const buttons = `
+                <div class="profile-summary" style="background: white; color: #333;">
+                    <div class="button-group" style="margin-top: 0;">
+                        <button class="action-button" onclick="loadNewsForUser()">📰 Nachrichten laden</button>
+                        <button class="action-button secondary" onclick="showProfile()">👤 Profil anzeigen</button>
+                    </div>
+                </div>
+            `;
+            addSpecialMessage(buttons);
+            chatInput.placeholder = 'Oder füge eine eigene Nachricht ein...';
+        }
+
+        function showProfile() {
+            showProfileSummary();
+        }
+
+        // Quick Options
+        function showQuickOptions(options) {
+            quickOptions.innerHTML = '';
+            options.forEach(option => {
+                const chip = document.createElement('div');
+                chip.className = 'option-chip';
+                chip.textContent = option;
+                chip.onclick = () => selectOption(option);
+                quickOptions.appendChild(chip);
+            });
+            quickOptions.style.display = 'flex';
+        }
+
+        function hideQuickOptions() {
+            quickOptions.style.display = 'none';
+            quickOptions.innerHTML = '';
+        }
+
+        function selectOption(option) {
+            chatInput.value = option;
+            sendMessage();
+        }
+
+        // News Loading
+        function loadNewsForUser() {
+            currentState = STATE.NEWS_FEED;
+
+            addMessage('📰 Nachrichten laden...', true);
+
+            showTypingIndicator();
+
+            setTimeout(() => {
+                removeTypingIndicator();
+                loadDemoNews();
+            }, 1500);
+        }
+
+        function loadDemoNews() {
+            addMessage(`Ich habe ${demoNews.length} aktuelle Nachrichten gefunden und bewerte sie jetzt nach deinem persönlichen Profil... ⚡`);
+
+            showTypingIndicator();
+
+            setTimeout(() => {
+                removeTypingIndicator();
+                newsDatabase = demoNews.map(news => ({
+                    ...news,
+                    analysis: generateRelevanceAnalysis(news.title)
+                }));
+
+                // Sort by relevance
+                newsDatabase.sort((a, b) => b.analysis.score - a.analysis.score);
+
+                displayNewsFeed();
+                currentState = STATE.READY;
+            }, 2000);
+        }
+
+        function displayNewsFeed() {
+            const highRelevance = newsDatabase.filter(n => n.analysis.score >= 70).length;
+            const medRelevance = newsDatabase.filter(n => n.analysis.score >= 40 && n.analysis.score < 70).length;
+            const lowRelevance = newsDatabase.filter(n => n.analysis.score < 40).length;
+
+            addMessage(`✅ Analyse abgeschlossen!\n\n🔴 Sehr relevant: ${highRelevance}\n🟠 Mittlere Relevanz: ${medRelevance}\n🔵 Geringe Relevanz: ${lowRelevance}`);
+
+            const feedHTML = `
+                <div class="news-feed">
+                    <div class="news-controls">
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" onclick="filterNews('all')">Alle (${newsDatabase.length})</button>
+                            <button class="filter-btn" onclick="filterNews('high')">Sehr relevant (${highRelevance})</button>
+                            <button class="filter-btn" onclick="filterNews('medium')">Mittel (${medRelevance})</button>
+                            <button class="filter-btn" onclick="filterNews('low')">Gering (${lowRelevance})</button>
+                        </div>
+                    </div>
+                    <div id="newsList">
+                        ${renderNewsList(newsDatabase)}
+                    </div>
+                </div>
+            `;
+
+            addSpecialMessage(feedHTML);
+        }
+
+        function renderNewsList(news) {
+            return news.map((item, index) => {
+                const scoreClass = item.analysis.score >= 70 ? 'high' : (item.analysis.score >= 40 ? 'medium' : 'low');
+                const barClass = item.analysis.score >= 70 ? 'high' : (item.analysis.score >= 40 ? 'medium' : 'low');
+
+                return `
+                    <div class="news-item ${scoreClass}" onclick="showNewsDetails(${index})">
+                        <div class="news-title">${item.title}</div>
+                        <div class="news-meta">
+                            <span class="news-source">📍 ${item.source}</span>
+                            <div class="news-relevance">
+                                <span class="mini-score">${item.analysis.score}%</span>
+                                <div class="mini-bar">
+                                    <div class="mini-bar-fill score-fill ${barClass}" style="width: ${item.analysis.score}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterNews(filter) {
+            currentFilter = filter;
+
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            let filtered = newsDatabase;
+
+            if (filter === 'high') {
+                filtered = newsDatabase.filter(n => n.analysis.score >= 70);
+            } else if (filter === 'medium') {
+                filtered = newsDatabase.filter(n => n.analysis.score >= 40 && n.analysis.score < 70);
+            } else if (filter === 'low') {
+                filtered = newsDatabase.filter(n => n.analysis.score < 40);
+            }
+
+            const newsList = document.getElementById('newsList');
+            if (newsList) {
+                newsList.innerHTML = renderNewsList(filtered);
+            }
+        }
+
+        function showNewsDetails(index) {
+            const news = newsDatabase[index];
+            displayRelevanceAnalysis(news.analysis, news.title);
+        }
+
+        // News Analysis
+        function analyzeNews(newsText) {
+            currentState = STATE.ANALYZING;
+
+            showTypingIndicator();
+
+            setTimeout(() => {
+                removeTypingIndicator();
+
+                const analysis = generateRelevanceAnalysis(newsText);
+                displayRelevanceAnalysis(analysis, newsText);
+
+                currentState = STATE.READY;
+            }, 1500 + Math.random() * 1000);
+        }
+
+        function generateRelevanceAnalysis(newsText) {
+            const analysis = {
+                news: newsText,
+                score: 0,
+                reasons: [],
+                detailedImpacts: [],
+                whatToDo: [],
+                personalImpact: ''
+            };
+
+            const lowerNews = newsText.toLowerCase();
+            let scorePoints = 0;
+
+            // Location relevance
+            if (userProfile.location && lowerNews.includes(userProfile.location.toLowerCase())) {
+                scorePoints += 25;
+                analysis.reasons.push(`📍 Betrifft direkt deinen Wohnort: ${userProfile.location}`);
+                analysis.detailedImpacts.push({
+                    title: '🌍 Direkte lokale Auswirkung',
+                    description: `Diese Nachricht betrifft ${userProfile.location}, wo du lebst. Änderungen in deiner Region können dein tägliches Leben, deine Mobilität und deine lokalen Kosten direkt beeinflussen.`,
+                    impact: `Du wirst dies unmittelbar in deinem Alltag spüren - sei es beim Einkaufen, auf dem Weg zur Arbeit oder bei lokalen Dienstleistungen.`
+                });
+            }
+
+            // Job/Industry relevance
+            if (userProfile.job) {
+                const jobKeywords = userProfile.job.toLowerCase().split(' ');
+                for (let keyword of jobKeywords) {
+                    if (keyword.length > 3 && lowerNews.includes(keyword)) {
+                        scorePoints += 20;
+                        analysis.reasons.push(`💼 Relevant für deine Branche: ${userProfile.job}`);
+                        analysis.detailedImpacts.push({
+                            title: '💼 Berufliche Relevanz',
+                            description: `Als ${userProfile.job} bist du direkt von dieser Entwicklung betroffen. Dies könnte Auswirkungen auf deine Arbeitssituation, Karrierechancen oder Branchentrends haben.`,
+                            impact: `Dies könnte bedeuten: Neue Chancen für deine Karriere, Veränderungen in deinem Arbeitsalltag, oder die Notwendigkeit, neue Fähigkeiten zu erlernen. Beobachte, wie sich dies in deiner Branche entwickelt.`
+                        });
+                        analysis.whatToDo.push('💡 Sprich mit Kollegen über diese Entwicklung und wie sie eure Arbeit beeinflussen könnte');
+                        break;
+                    }
+                }
+            }
+
+            // Interests relevance
+            if (userProfile.interests) {
+                const interests = userProfile.interests.split(',').map(i => i.trim().toLowerCase());
+                let interestMatch = false;
+                for (let interest of interests) {
+                    if (lowerNews.includes(interest)) {
+                        scorePoints += 15;
+                        interestMatch = true;
+                    }
+                }
+                if (interestMatch) {
+                    analysis.reasons.push(`🎯 Passt zu deinen Interessen: ${userProfile.interests}`);
+                    analysis.detailedImpacts.push({
+                        title: '🎯 Interessenübereinstimmung',
+                        description: `Diese Nachricht deckt sich mit deinen persönlichen Interessen (${userProfile.interests}). Was dich interessiert, beeinflusst oft auch deine Freizeit, Ausgaben und sozialen Aktivitäten.`,
+                        impact: `Dies könnte neue Möglichkeiten eröffnen oder Veränderungen in Bereichen mit sich bringen, die dir wichtig sind.`
+                    });
+                }
+            }
+
+            // Concerns relevance
+            if (userProfile.concerns) {
+                const concerns = userProfile.concerns.split(',').map(c => c.trim().toLowerCase());
+                let concernMatch = false;
+                for (let concern of concerns) {
+                    if (lowerNews.includes(concern)) {
+                        scorePoints += 20;
+                        concernMatch = true;
+                    }
+                }
+                if (concernMatch) {
+                    analysis.reasons.push(`⚠️ Betrifft deine Sorgenthemen: ${userProfile.concerns}`);
+                    analysis.detailedImpacts.push({
+                        title: '⚠️ Wichtiges Sorgenthema',
+                        description: `Diese Nachricht behandelt Themen, die dir besonders am Herzen liegen: ${userProfile.concerns}. Was dich beschäftigt, hat oft direkten Einfluss auf deine Lebensqualität und Zukunftsplanung.`,
+                        impact: `Die Entwicklung könnte deine Sorgen verstärken oder lindern. Es ist wichtig, informiert zu bleiben und gegebenenfalls zu handeln.`
+                    });
+                    analysis.whatToDo.push('📋 Informiere dich weiter und überlege, ob du aktiv werden solltest');
+                }
+            }
+
+            // Family relevance
+            if (userProfile.children && userProfile.children !== '0') {
+                const familyKeywords = ['kinder', 'schule', 'bildung', 'familie', 'eltern', 'kindergeld', 'kita'];
+                for (let keyword of familyKeywords) {
+                    if (lowerNews.includes(keyword)) {
+                        scorePoints += 15;
+                        analysis.reasons.push(`👨‍👩‍👧‍👦 Relevant für Familien mit ${userProfile.children} Kind(ern)`);
+                        analysis.detailedImpacts.push({
+                            title: '👨‍👩‍👧‍👦 Familien-Impact',
+                            description: `Mit ${userProfile.children} Kind(ern) bist du besonders von Familien-Themen betroffen. Änderungen bei Bildung, Betreuung oder Familienleistungen beeinflussen deinen Alltag und dein Budget direkt.`,
+                            impact: `Dies könnte bedeuten: Mehr oder weniger Kosten, bessere oder schlechtere Betreuungsmöglichkeiten, Änderungen im Familienalltag. Prüfe, wie dies deine Familie konkret betrifft.`
+                        });
+                        analysis.whatToDo.push('👪 Berechne, wie sich dies finanziell auf deine Familie auswirkt');
+                        break;
+                    }
+                }
+            }
+
+            // Housing relevance
+            if (userProfile.housing) {
+                const housingKeywords = {
+                    'Mietwohnung': ['miete', 'mietpreis', 'vermieter', 'wohnung'],
+                    'Eigentumswohnung': ['eigentum', 'immobilie', 'wohneigentum', 'hausgeld'],
+                    'Miethaus': ['miete', 'haus', 'vermieter'],
+                    'Eigenheim': ['immobilie', 'haus', 'eigentum', 'grundsteuer', 'eigenheim']
+                };
+
+                const keywords = housingKeywords[userProfile.housing] || [];
+                for (let keyword of keywords) {
+                    if (lowerNews.includes(keyword)) {
+                        scorePoints += 10;
+                        analysis.reasons.push(`🏠 Relevant für ${userProfile.housing}-Bewohner`);
+
+                        const housingImpact = {
+                            'Mietwohnung': 'Als Mieter könnten sich deine monatlichen Kosten ändern oder neue Rechte/Pflichten entstehen. Dies beeinflusst direkt dein verfügbares Budget.',
+                            'Eigentumswohnung': 'Als Eigentümer einer Wohnung können sich Wertentwicklung, Nebenkosten oder steuerliche Aspekte ändern. Dies betrifft dein Vermögen direkt.',
+                            'Miethaus': 'Als Hausmieter könnten sich Mietkosten oder Mietrechte ändern. Dies kann erhebliche Auswirkungen auf deine monatlichen Ausgaben haben.',
+                            'Eigenheim': 'Als Hausbesitzer sind Grundsteuer, Immobilienwert und Instandhaltungskosten betroffen. Dies beeinflusst dein Vermögen und deine Lebensplanung.'
+                        };
+
+                        analysis.detailedImpacts.push({
+                            title: '🏠 Wohn-Situation',
+                            description: `Du lebst in einer ${userProfile.housing}. ${housingImpact[userProfile.housing] || 'Diese Nachricht könnte deine Wohnsituation beeinflussen.'}`,
+                            impact: 'Prüfe, ob du Maßnahmen ergreifen musst, um vorbereitet zu sein oder Vorteile zu nutzen.'
+                        });
+                        analysis.whatToDo.push('🏠 Prüfe deine Verträge und informiere dich über deine Rechte');
+                        break;
+                    }
+                }
+            }
+
+            // Car relevance
+            if (userProfile.car && userProfile.car !== 'Nein') {
+                const carKeywords = ['auto', 'verkehr', 'benzin', 'diesel', 'elektro', 'kfz', 'fahrverbot', 'parkplatz'];
+                for (let keyword of carKeywords) {
+                    if (lowerNews.includes(keyword)) {
+                        scorePoints += 10;
+                        analysis.reasons.push(`🚗 Relevant für Autobesitzer (${userProfile.car})`);
+
+                        const carType = userProfile.car;
+                        let carImpact = 'Diese Änderung könnte deine Mobilität und Kosten beeinflussen.';
+
+                        if (carType.includes('Elektro')) {
+                            carImpact = 'Als Elektroauto-Fahrer könnten sich Förderungen, Ladeinfrastruktur oder Stromkosten ändern. Dies beeinflusst die Wirtschaftlichkeit deines Fahrzeugs.';
+                        } else if (carType.includes('Verbrenner')) {
+                            carImpact = 'Als Verbrenner-Fahrer könnten Spritpreise, Fahrverbote oder Steuern dich betreffen. Überlege, ob ein Umstieg sinnvoll wird.';
+                        } else if (carType.includes('Hybrid')) {
+                            carImpact = 'Als Hybrid-Fahrer bist du von Entwicklungen bei Benzin UND Strom betroffen. Beobachte beide Märkte.';
+                        }
+
+                        analysis.detailedImpacts.push({
+                            title: '🚗 Mobilität & Auto',
+                            description: `Du besitzt ein ${carType}. ${carImpact}`,
+                            impact: 'Berechne, wie sich Kostenänderungen auf dein Jahresbudget auswirken und ob Anpassungen nötig sind.'
+                        });
+                        analysis.whatToDo.push('🚗 Kalkuliere die finanziellen Auswirkungen auf deine Mobilität');
+                        break;
+                    }
+                }
+            }
+
+            // Age-specific relevance
+            if (userProfile.age) {
+                const ageKeywords = {
+                    '18-25': ['ausbildung', 'studium', 'uni', 'job', 'berufsstart'],
+                    '26-35': ['karriere', 'beruf', 'wohnung', 'familie'],
+                    '36-45': ['karriere', 'familie', 'immobilie', 'vorsorge'],
+                    '46-55': ['job', 'gesundheit', 'vorsorge', 'rente'],
+                    '56-65': ['rente', 'altersvorsorge', 'gesundheit'],
+                    '66+': ['rente', 'pension', 'gesundheit', 'pflege']
+                };
+
+                const ageImpacts = {
+                    '18-25': 'In deiner Lebensphase geht es um Ausbildung und Berufseinstieg. Diese Nachricht könnte deine Startchancen, Ausbildungsmöglichkeiten oder ersten Karriereschritte beeinflussen.',
+                    '26-35': 'Du bist in der Aufbauphase deines Lebens. Karriere, erste Immobilie oder Familiengründung stehen im Fokus - diese Nachricht könnte diese Pläne beeinflussen.',
+                    '36-45': 'Du bist mitten im Berufsleben mit Familie. Diese Nachricht kann Karriere, Familienfinanzen und langfristige Planung betreffen.',
+                    '46-55': 'Du denkst vermehrt an Absicherung und Altersvorsorge. Diese Nachricht könnte deine finanzielle Zukunft und Gesundheitsvorsorge beeinflussen.',
+                    '56-65': 'Der Ruhestand rückt näher. Diese Nachricht könnte deine Rente, Altersvorsorge oder den Übergang in den Ruhestand betreffen.',
+                    '66+': 'Im Ruhestand sind Rente, Gesundheit und Pflege zentral. Diese Nachricht könnte deine Lebensqualität und finanzielle Sicherheit beeinflussen.'
+                };
+
+                const keywords = ageKeywords[userProfile.age] || [];
+                for (let keyword of keywords) {
+                    if (lowerNews.includes(keyword)) {
+                        scorePoints += 10;
+                        analysis.reasons.push(`👤 Altersrelevant für Gruppe ${userProfile.age}`);
+                        analysis.detailedImpacts.push({
+                            title: '👤 Lebensphase-Relevanz',
+                            description: `Mit ${userProfile.age} Jahren bist du in einer bestimmten Lebensphase. ${ageImpacts[userProfile.age] || 'Diese Nachricht ist für deine Altersgruppe relevant.'}`,
+                            impact: 'Überlege, wie dies deine kurz- und langfristige Lebensplanung beeinflusst.'
+                        });
+                        break;
+                    }
+                }
+            }
+
+            // Cap score at 100
+            analysis.score = Math.min(scorePoints, 100);
+
+            // Generate personal impact message
+            if (analysis.score >= 70) {
+                analysis.personalImpact = 'Diese Nachricht ist SEHR RELEVANT für dich! Sie betrifft mehrere Aspekte deines Lebens direkt und wird wahrscheinlich konkrete Änderungen in deinem Alltag mit sich bringen.';
+            } else if (analysis.score >= 40) {
+                analysis.personalImpact = 'Diese Nachricht hat MITTLERE RELEVANZ für dich. Einige Aspekte könnten dich betreffen und es lohnt sich, die Entwicklung im Auge zu behalten.';
+            } else if (analysis.score >= 15) {
+                analysis.personalImpact = 'Diese Nachricht hat GERINGE RELEVANZ für dich. Es gibt einige Berührungspunkte zu deinem Leben, aber der direkte Einfluss ist begrenzt.';
+            } else {
+                analysis.personalImpact = 'Diese Nachricht hat SEHR GERINGE direkte Relevanz für dich basierend auf deinem Profil. Der Einfluss auf dein Leben ist wahrscheinlich minimal.';
+            }
+
+            if (analysis.reasons.length === 0) {
+                analysis.reasons.push('Keine direkten Übereinstimmungen mit deinem Profil gefunden');
+                analysis.detailedImpacts.push({
+                    title: '📊 Allgemeine Information',
+                    description: 'Diese Nachricht hat keine direkte Verbindung zu deinen persönlichen Umständen.',
+                    impact: 'Du kannst dies als allgemeine Information betrachten, ohne dass unmittelbare Handlungen erforderlich sind.'
+                });
+            }
+
+            // Add general action item if score is high
+            if (analysis.score >= 70 && analysis.whatToDo.length === 0) {
+                analysis.whatToDo.push('⚡ Diese Nachricht ist hochrelevant - informiere dich weiter und handle proaktiv!');
+            }
+
+            return analysis;
+        }
+
+        function displayRelevanceAnalysis(analysis, newsTitle = null) {
+            const scoreClass = analysis.score >= 70 ? 'high' : (analysis.score >= 40 ? 'medium' : 'low');
+
+            const detailedImpactsHTML = analysis.detailedImpacts.map(impact => `
+                <div style="background: #f9f9f9; padding: 15px; border-radius: 10px; margin: 10px 0; border-left: 3px solid #667eea;">
+                    <div style="font-weight: bold; color: #667eea; margin-bottom: 8px;">${impact.title}</div>
+                    <div style="font-size: 14px; line-height: 1.6; margin-bottom: 8px;">${impact.description}</div>
+                    <div style="font-size: 13px; color: #555; font-style: italic;">💭 ${impact.impact}</div>
+                </div>
+            `).join('');
+
+            const whatToDoHTML = analysis.whatToDo.length > 0 ? `
+                <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-top: 15px; border-left: 3px solid #ffc107;">
+                    <div style="font-weight: bold; color: #856404; margin-bottom: 10px;">✅ Was du tun solltest:</div>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        ${analysis.whatToDo.map(action => `<li style="margin: 5px 0; color: #856404;">${action}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : '';
+
+            const card = `
+                <div class="relevance-card" style="max-width: 95%;">
+                    ${newsTitle ? `<div style="font-size: 15px; color: #333; margin-bottom: 15px; line-height: 1.5; font-weight: 500; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">${newsTitle}</div>` : ''}
+
+                    <div class="relevance-header">🎯 Relevanz-Analyse</div>
+
+                    <div class="relevance-score">
+                        <span class="score-label">${analysis.score}%</span>
+                        <div class="score-bar">
+                            <div class="score-fill ${scoreClass}" style="width: ${analysis.score}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="relevance-reasons" style="margin-bottom: 20px;">
+                        <strong>${analysis.personalImpact}</strong>
+                    </div>
+
+                    ${analysis.detailedImpacts.length > 0 ? `
+                        <div style="margin-top: 20px;">
+                            <div style="font-weight: bold; font-size: 15px; margin-bottom: 15px; color: #333;">🔍 Wie betrifft dich das konkret?</div>
+                            ${detailedImpactsHTML}
+                        </div>
+                    ` : ''}
+
+                    ${whatToDoHTML}
+
+                    ${analysis.reasons.length > 0 ? `
+                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                            <div style="font-size: 13px; color: #666; font-weight: 500; margin-bottom: 8px;">📌 Erkannte Übereinstimmungen:</div>
+                            <ul style="margin: 0; padding-left: 20px;">
+                                ${analysis.reasons.map(r => `<li style="margin: 5px 0; font-size: 13px; color: #666;">${r}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            addSpecialMessage(card);
+        }
+
+        // Message Handling
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (message === '') return;
+
+            addMessage(message, true);
+            chatInput.value = '';
+            hideQuickOptions();
+
+            processAnswer(message);
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Initialize app
+        window.onload = () => {
+            init();
+            chatInput.focus();
+        };
+    </script>
+</body>
+</html>
