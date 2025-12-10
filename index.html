@@ -218,8 +218,8 @@
             background: rgba(255, 255, 255, 0.03);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(0, 245, 255, 0.2);
-            border-radius: 20px;
-            padding: 24px;
+            border-radius: 16px;
+            padding: 18px;
             margin: 10px 0;
             box-shadow:
                 0 8px 32px rgba(0, 0, 0, 0.4),
@@ -227,6 +227,58 @@
             max-width: 95%;
             position: relative;
             overflow: hidden;
+        }
+
+        .collapsible-section {
+            margin-top: 12px;
+        }
+
+        .collapse-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .collapse-header:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .collapse-title {
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .collapse-icon {
+            font-size: 12px;
+            transition: transform 0.3s;
+            color: #00f5ff;
+        }
+
+        .collapse-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .collapse-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            padding: 0 10px;
+        }
+
+        .collapse-content.expanded {
+            max-height: 3000px;
+            padding: 10px;
+            transition: max-height 0.5s ease-in, padding 0.3s ease-in;
         }
 
         .relevance-card::before {
@@ -393,12 +445,16 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
+            padding: 10px;
             background: white;
-            border-radius: 12px;
-            margin-bottom: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
 
         .filter-buttons {
@@ -408,13 +464,14 @@
         }
 
         .filter-btn {
-            padding: 6px 15px;
+            padding: 5px 12px;
             background: #f0f0f0;
             border: 2px solid transparent;
-            border-radius: 15px;
-            font-size: 13px;
+            border-radius: 12px;
+            font-size: 12px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
+            font-weight: 500;
         }
 
         .filter-btn.active {
@@ -431,18 +488,18 @@
 
         .news-item {
             background: white;
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
             border-left: 4px solid #e0e0e0;
         }
 
         .news-item:hover {
-            transform: translateX(5px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateX(3px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
         }
 
         .news-item.high {
@@ -458,11 +515,11 @@
         }
 
         .news-title {
-            font-weight: bold;
-            font-size: 15px;
-            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 6px;
             color: #333;
-            line-height: 1.4;
+            line-height: 1.3;
         }
 
         .news-meta {
@@ -1771,61 +1828,72 @@
 
         function displayRelevanceAnalysis(analysis, newsTitle = null) {
             const scoreClass = analysis.score >= 60 ? 'high' : (analysis.score >= 35 ? 'medium' : 'low');
+            const collapseId = 'collapse_' + Date.now();
 
             const personalContextHTML = analysis.personalContext ? `
-                <div style="background: linear-gradient(135deg, rgba(0, 245, 255, 0.08) 0%, rgba(255, 0, 110, 0.08) 100%); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(0, 245, 255, 0.2);">
-                    <div style="font-weight: bold; color: #00f5ff; margin-bottom: 8px; font-size: 13px;">👤 DEINE LEBENSSITUATION</div>
-                    <div style="font-size: 14px; line-height: 1.8; color: #e0e0e0;">${analysis.personalContext}</div>
+                <div style="background: linear-gradient(135deg, rgba(0, 245, 255, 0.08) 0%, rgba(255, 0, 110, 0.08) 100%); padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(0, 245, 255, 0.2);">
+                    <div style="font-weight: 600; color: #00f5ff; margin-bottom: 6px; font-size: 12px;">👤 DEINE LEBENSSITUATION</div>
+                    <div style="font-size: 13px; line-height: 1.6; color: #e0e0e0;">${analysis.personalContext}</div>
                 </div>
             ` : '';
 
-            const detailedImpactsHTML = analysis.detailedImpacts.map(impact => `
-                <div style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 10px; margin: 10px 0; border-left: 3px solid #00f5ff; backdrop-filter: blur(10px);">
-                    <div style="font-weight: bold; color: #00f5ff; margin-bottom: 8px;">${impact.title}</div>
-                    <div style="font-size: 14px; line-height: 1.6; margin-bottom: 8px; color: #e0e0e0;">${impact.description}</div>
-                    <div style="font-size: 13px; color: #b0b0b0; font-style: italic;">💭 ${impact.impact}</div>
-                </div>
-            `).join('');
+            // Compact direct impacts - show only first 2, rest collapsible
+            const firstImpacts = analysis.detailedImpacts.slice(0, 2);
+            const restImpacts = analysis.detailedImpacts.slice(2);
 
+            const compactImpactHTML = (impact) => `
+                <div style="background: rgba(255, 255, 255, 0.03); padding: 10px; border-radius: 8px; margin: 8px 0; border-left: 3px solid #00f5ff;">
+                    <div style="font-weight: 600; color: #00f5ff; margin-bottom: 4px; font-size: 13px;">${impact.title}</div>
+                    <div style="font-size: 12px; line-height: 1.5; color: #e0e0e0;">${impact.description}</div>
+                </div>
+            `;
+
+            const detailedImpactsHTML = firstImpacts.map(compactImpactHTML).join('');
+            const restImpactsHTML = restImpacts.map(compactImpactHTML).join('');
+
+            // Collapsible indirect effects
             const indirectEffectsHTML = analysis.indirectEffects && analysis.indirectEffects.length > 0 ? `
-                <div style="margin-top: 25px; padding-top: 20px; border-top: 2px solid rgba(255, 0, 110, 0.3);">
-                    <div style="font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #ff006e; display: flex; align-items: center; gap: 8px;">
-                        <span>🔗</span>
-                        <span>Indirekte Effekte (2. Ordnung)</span>
-                    </div>
-                    <div style="font-size: 13px; color: #b0b0b0; margin-bottom: 15px; font-style: italic;">
-                        Diese Kettenreaktionen könnten dein Leben beeinflussen, auch wenn du nicht direkt betroffen bist:
-                    </div>
-                    ${analysis.indirectEffects.map(effect => `
-                        <div style="background: rgba(255, 0, 110, 0.05); padding: 15px; border-radius: 10px; margin: 12px 0; border-left: 3px solid #ff006e;">
-                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-                                <div style="font-weight: bold; color: #ff006e; flex: 1;">${effect.title}</div>
-                                <div style="background: rgba(255, 0, 110, 0.2); color: #ff006e; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; margin-left: 10px;">
-                                    ${effect.likelihood}
-                                </div>
-                            </div>
-                            <div style="font-size: 14px; line-height: 1.7; color: #e0e0e0;">${effect.description}</div>
+                <div class="collapsible-section">
+                    <div class="collapse-header" onclick="toggleCollapse('${collapseId}_indirect')">
+                        <div class="collapse-title">
+                            <span>🔗</span>
+                            <span>Indirekte Effekte (2. Ordnung)</span>
+                            <span style="color: #b0b0b0; font-size: 12px; font-weight: 400;">(${analysis.indirectEffects.length} Kettenreaktionen)</span>
                         </div>
-                    `).join('')}
+                        <div class="collapse-icon" id="${collapseId}_indirect_icon">▼</div>
+                    </div>
+                    <div class="collapse-content" id="${collapseId}_indirect">
+                        ${analysis.indirectEffects.map(effect => `
+                            <div style="background: rgba(255, 0, 110, 0.03); padding: 10px; border-radius: 8px; margin: 8px 0; border-left: 3px solid #ff006e;">
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
+                                    <div style="font-weight: 600; color: #ff006e; flex: 1; font-size: 13px;">${effect.title}</div>
+                                    <div style="background: rgba(255, 0, 110, 0.2); color: #ff006e; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; white-space: nowrap; margin-left: 10px;">
+                                        ${effect.likelihood}
+                                    </div>
+                                </div>
+                                <div style="font-size: 12px; line-height: 1.6; color: #e0e0e0;">${effect.description}</div>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
             ` : '';
 
             const whatToDoHTML = analysis.whatToDo.length > 0 ? `
-                <div style="background: rgba(255, 193, 7, 0.1); padding: 15px; border-radius: 10px; margin-top: 20px; border-left: 3px solid #ffc107;">
-                    <div style="font-weight: bold; color: #ffc107; margin-bottom: 10px;">✅ Was du tun solltest:</div>
-                    <ul style="margin: 0; padding-left: 20px;">
-                        ${analysis.whatToDo.map(action => `<li style="margin: 8px 0; color: #e0e0e0; line-height: 1.6;">${action}</li>`).join('')}
+                <div style="background: rgba(255, 193, 7, 0.08); padding: 12px; border-radius: 8px; margin-top: 15px; border-left: 3px solid #ffc107;">
+                    <div style="font-weight: 600; color: #ffc107; margin-bottom: 8px; font-size: 13px;">✅ Was du tun solltest:</div>
+                    <ul style="margin: 0; padding-left: 18px;">
+                        ${analysis.whatToDo.map(action => `<li style="margin: 6px 0; color: #e0e0e0; line-height: 1.5; font-size: 12px;">${action}</li>`).join('')}
                     </ul>
                 </div>
             ` : '';
 
             const card = `
                 <div class="relevance-card" style="max-width: 95%;">
-                    ${newsTitle ? `<div style="font-size: 15px; color: #e0e0e0; margin-bottom: 15px; line-height: 1.5; font-weight: 500; border-bottom: 2px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px;">${newsTitle}</div>` : ''}
+                    ${newsTitle ? `<div style="font-size: 14px; color: #e0e0e0; margin-bottom: 12px; line-height: 1.4; font-weight: 500; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 8px;">${newsTitle}</div>` : ''}
 
                     ${personalContextHTML}
 
-                    <div class="relevance-header">🎯 Relevanz-Analyse</div>
+                    <div class="relevance-header" style="font-size: 16px; margin-bottom: 12px;">🎯 Relevanz-Analyse</div>
 
                     <div class="relevance-score">
                         <span class="score-label">${analysis.score}%</span>
@@ -1834,14 +1902,28 @@
                         </div>
                     </div>
 
-                    <div class="relevance-reasons" style="margin-bottom: 20px;">
-                        <strong style="color: #e0e0e0;">${analysis.personalImpact}</strong>
+                    <div class="relevance-reasons" style="margin-bottom: 15px;">
+                        <strong style="color: #e0e0e0; font-size: 13px;">${analysis.personalImpact}</strong>
                     </div>
 
                     ${analysis.detailedImpacts.length > 0 ? `
-                        <div style="margin-top: 20px;">
-                            <div style="font-weight: bold; font-size: 15px; margin-bottom: 15px; color: #00f5ff;">🎯 Direkte Auswirkungen (1. Ordnung)</div>
+                        <div style="margin-top: 15px;">
+                            <div style="font-weight: 600; font-size: 14px; margin-bottom: 10px; color: #00f5ff;">🎯 Direkte Auswirkungen</div>
                             ${detailedImpactsHTML}
+                            ${restImpacts.length > 0 ? `
+                                <div class="collapsible-section">
+                                    <div class="collapse-header" onclick="toggleCollapse('${collapseId}_more')">
+                                        <div class="collapse-title">
+                                            <span>Weitere Details anzeigen</span>
+                                            <span style="color: #b0b0b0; font-size: 12px; font-weight: 400;">(+${restImpacts.length})</span>
+                                        </div>
+                                        <div class="collapse-icon" id="${collapseId}_more_icon">▼</div>
+                                    </div>
+                                    <div class="collapse-content" id="${collapseId}_more">
+                                        ${restImpactsHTML}
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
                     ` : ''}
 
@@ -1850,17 +1932,32 @@
                     ${whatToDoHTML}
 
                     ${analysis.reasons.length > 0 ? `
-                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                            <div style="font-size: 13px; color: #b0b0b0; font-weight: 500; margin-bottom: 8px;">📌 Erkannte Übereinstimmungen:</div>
-                            <ul style="margin: 0; padding-left: 20px;">
-                                ${analysis.reasons.map(r => `<li style="margin: 5px 0; font-size: 13px; color: #b0b0b0;">${r}</li>`).join('')}
-                            </ul>
+                        <div class="collapsible-section">
+                            <div class="collapse-header" onclick="toggleCollapse('${collapseId}_reasons')">
+                                <div class="collapse-title">📌 Erkannte Übereinstimmungen</div>
+                                <div class="collapse-icon" id="${collapseId}_reasons_icon">▼</div>
+                            </div>
+                            <div class="collapse-content" id="${collapseId}_reasons">
+                                <ul style="margin: 8px 0; padding-left: 18px;">
+                                    ${analysis.reasons.map(r => `<li style="margin: 4px 0; font-size: 12px; color: #b0b0b0;">${r}</li>`).join('')}
+                                </ul>
+                            </div>
                         </div>
                     ` : ''}
                 </div>
             `;
 
             addSpecialMessage(card);
+        }
+
+        function toggleCollapse(id) {
+            const content = document.getElementById(id);
+            const icon = document.getElementById(id + '_icon');
+
+            if (content && icon) {
+                content.classList.toggle('expanded');
+                icon.classList.toggle('expanded');
+            }
         }
 
         // Message Handling
