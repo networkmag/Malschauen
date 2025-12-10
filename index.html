@@ -1185,12 +1185,17 @@
                 score: 0,
                 reasons: [],
                 detailedImpacts: [],
+                indirectEffects: [],
                 whatToDo: [],
-                personalImpact: ''
+                personalImpact: '',
+                personalContext: ''
             };
 
             const lowerNews = newsText.toLowerCase();
             let scorePoints = 0;
+
+            // Generate personal context introduction
+            analysis.personalContext = generatePersonalContext();
 
             // Location relevance
             if (userProfile.location && lowerNews.includes(userProfile.location.toLowerCase())) {
@@ -1406,32 +1411,280 @@
                 analysis.whatToDo.push('⚡ Diese Nachricht ist hochrelevant - informiere dich weiter und handle proaktiv!');
             }
 
+            // Generate indirect effects (second-order impacts)
+            analysis.indirectEffects = generateIndirectEffects(lowerNews, analysis.score);
+
             return analysis;
+        }
+
+        // Generate personal context summary
+        function generatePersonalContext() {
+            let context = `Du bist ${userProfile.name}`;
+            if (userProfile.age) context += `, ${userProfile.age} Jahre`;
+            if (userProfile.gender) context += `, ${userProfile.gender}`;
+            context += `.`;
+
+            if (userProfile.familyStatus) {
+                context += ` Du bist ${userProfile.familyStatus.toLowerCase()}`;
+                if (userProfile.children && userProfile.children !== '0') {
+                    context += ` und hast ${userProfile.children} Kind(er)`;
+                }
+                context += `.`;
+            }
+
+            if (userProfile.job) {
+                context += ` Du arbeitest als ${userProfile.job}`;
+            }
+            if (userProfile.location) {
+                context += ` in ${userProfile.location}`;
+            }
+            context += `.`;
+
+            if (userProfile.housing) {
+                context += ` Du wohnst in einer ${userProfile.housing}`;
+                if (userProfile.car && userProfile.car !== 'Nein') {
+                    context += ` und besitzt ein ${userProfile.car}`;
+                }
+                context += `.`;
+            }
+
+            return context;
+        }
+
+        // Generate indirect effects (second-order impacts)
+        function generateIndirectEffects(lowerNews, directScore) {
+            const effects = [];
+
+            // Economic ripple effects
+            if (lowerNews.includes('preis') || lowerNews.includes('kosten') || lowerNews.includes('steuer')) {
+                // Price changes affect everyone
+                let economicEffect = {
+                    title: '💰 Wirtschaftliche Kettenreaktion',
+                    description: '',
+                    likelihood: 'Hoch'
+                };
+
+                if (userProfile.children && userProfile.children !== '0') {
+                    economicEffect.description = `Preisänderungen wirken sich besonders auf Familien aus. Mit ${userProfile.children} Kind(ern) kaufst du mehr ein - selbst kleine Preissteigerungen summieren sich über das Jahr zu mehreren hundert Euro. Dein Haushaltsbudget wird indirekt durch diese Entwicklung belastet.`;
+                } else if (userProfile.housing === 'Mietwohnung' || userProfile.housing === 'Miethaus') {
+                    economicEffect.description = `Als Mieter bist du besonders von Preisentwicklungen betroffen. Höhere Kosten bedeuten weniger verfügbares Einkommen. Dies könnte deine Fähigkeit einschränken, Rücklagen zu bilden oder größere Anschaffungen zu tätigen.`;
+                } else {
+                    economicEffect.description = `Auch wenn du nicht direkt betroffen bist, beeinflussen Preisänderungen deine Kaufkraft. Steigende Kosten in einem Bereich führen oft zu Domino-Effekten: Transport wird teurer → Lebensmittel werden teurer → weniger Geld für Freizeit.`;
+                }
+                effects.push(economicEffect);
+            }
+
+            // Regional effects
+            if (lowerNews.includes('berlin') || lowerNews.includes('münchen') || lowerNews.includes('hamburg') ||
+                lowerNews.includes('köln') || lowerNews.includes('frankfurt') || lowerNews.includes('stadt')) {
+                const cities = ['berlin', 'münchen', 'hamburg', 'köln', 'frankfurt', 'stuttgart', 'düsseldorf'];
+                const newsHasCity = cities.some(city => lowerNews.includes(city));
+
+                if (newsHasCity && userProfile.location) {
+                    const userCity = userProfile.location.toLowerCase();
+                    const affectedCity = cities.find(city => lowerNews.includes(city));
+
+                    if (affectedCity && !userCity.includes(affectedCity)) {
+                        effects.push({
+                            title: '🗺️ Regionaler Dominoeffekt',
+                            description: `Was in ${affectedCity.charAt(0).toUpperCase() + affectedCity.slice(1)} passiert, bleibt selten dort. Als ${userProfile.location}-Bewohner solltest du beobachten: Politische Maßnahmen in Großstädten werden oft zum Vorbild für andere Regionen. Innerhalb von 1-2 Jahren könnten ähnliche Regelungen auch bei dir umgesetzt werden.`,
+                            likelihood: 'Mittel bis Hoch'
+                        });
+                    }
+                }
+            }
+
+            // Labor market effects
+            if (lowerNews.includes('job') || lowerNews.includes('arbeit') || lowerNews.includes('mindestlohn') ||
+                lowerNews.includes('homeoffice') || lowerNews.includes('vier-tage-woche')) {
+                if (userProfile.job) {
+                    effects.push({
+                        title: '💼 Arbeitsmarkt-Kettenreaktion',
+                        description: `Veränderungen am Arbeitsmarkt betreffen alle Branchen indirekt. Als ${userProfile.job} könntest du merken: Wenn andere Branchen bessere Konditionen bieten, steigt der Druck auf deinen Arbeitgeber. Das kann zu Verbesserungen führen - oder dazu, dass Kollegen abwandern und du mehr Arbeit hast. Beobachte die Stimmung in deinem Unternehmen.`,
+                        likelihood: 'Mittel'
+                    });
+                }
+            }
+
+            // Housing market spillover
+            if (lowerNews.includes('wohn') || lowerNews.includes('miete') || lowerNews.includes('immobilie')) {
+                if (userProfile.housing === 'Mietwohnung' || userProfile.housing === 'Miethaus') {
+                    effects.push({
+                        title: '🏘️ Wohnungsmarkt-Spillover',
+                        description: `Der Wohnungsmarkt ist hochdynamisch. Selbst wenn diese Nachricht nicht direkt ${userProfile.location} betrifft: Mietsteigerungen in einer Stadt erhöhen die Nachfrage in Nachbarstädten. Investoren beobachten Trends. Bei deiner nächsten Mietverhandlung oder -erhöhung wird dein Vermieter auf solche Entwicklungen verweisen. Dokumentiere jetzt schon lokale Vergleichsmieten.`,
+                        likelihood: 'Hoch'
+                    });
+                } else if (userProfile.housing === 'Eigenheim' || userProfile.housing === 'Eigentumswohnung') {
+                    effects.push({
+                        title: '🏘️ Immobilienwert-Effekt',
+                        description: `Als Eigentümer profitierst du indirekt von Wohnungsmarkt-Entwicklungen. Steigen Mieten oder wird Wohneigentum gefördert, steigt auch der Wert deiner Immobilie. Dies verbessert deine Vermögensposition und könnte Refinanzierungen zu besseren Konditionen ermöglichen.`,
+                        likelihood: 'Mittel bis Hoch'
+                    });
+                }
+            }
+
+            // Transportation and mobility
+            if (lowerNews.includes('verkehr') || lowerNews.includes('benzin') || lowerNews.includes('bahn') ||
+                lowerNews.includes('öpnv') || lowerNews.includes('ticket')) {
+                if (userProfile.car && userProfile.car !== 'Nein') {
+                    effects.push({
+                        title: '🚇 Mobilitäts-Dominoeffekt',
+                        description: `Verkehrspolitik schafft Anreize: Wird ÖPNV günstiger oder Autofahren teurer, ändern Menschen ihr Verhalten. Für dich als ${userProfile.car}-Besitzer bedeutet das: Weniger Autos → weniger Staus, ABER auch weniger politischer Druck für Straßeninvestitionen. Oder umgekehrt: Mehr Autos → mehr Parkplatznot, höhere Parkgebühren. Die Verkehrswende betrifft alle Verkehrsteilnehmer indirekt.`,
+                        likelihood: 'Hoch'
+                    });
+                } else {
+                    effects.push({
+                        title: '🚇 Mobilitätswandel ohne Auto',
+                        description: `Auch ohne Auto bist du von Verkehrsentwicklungen betroffen: Besserer ÖPNV bedeutet bessere Anbindung, höhere Immobilienwerte in deiner Gegend, mehr Mobilität für dich. Höhere Benzinpreise machen Carsharing günstiger relativ zum eigenen Auto. Beobachte lokale Mobilitätsangebote - sie werden sich ändern.`,
+                        likelihood: 'Mittel'
+                    });
+                }
+            }
+
+            // Family and education policy
+            if (lowerNews.includes('kinder') || lowerNews.includes('bildung') || lowerNews.includes('schule') ||
+                lowerNews.includes('kita') || lowerNews.includes('kindergeld')) {
+                if (userProfile.children && userProfile.children !== '0') {
+                    effects.push({
+                        title: '👶 Langfristige Familien-Entwicklung',
+                        description: `Bildungs- und Familienpolitik wirkt langfristig: Bessere Kitas heute bedeuten bessere Schulvorbereitung morgen. Höheres Kindergeld erhöht die Kaufkraft in deinem Viertel - lokale Geschäfte profitieren, Immobilienwerte steigen. Mit ${userProfile.children} Kind(ern) bist du Teil dieser Entwicklung. Überlege: Wie verändert sich dadurch deine Nachbarschaft in 5-10 Jahren?`,
+                        likelihood: 'Mittel bis Hoch'
+                    });
+                } else if (userProfile.age && (userProfile.age === '18-25' || userProfile.age === '26-35')) {
+                    effects.push({
+                        title: '👶 Zukünftige Familienplanung',
+                        description: `Auch wenn du aktuell keine Kinder hast: In deiner Altersgruppe (${userProfile.age}) ist Familiengründung oft ein Thema. Familienpolitik heute beeinflusst deine Entscheidungen morgen. Bessere Betreuung und höhere finanzielle Unterstützung könnten Familienplanung attraktiver oder überhaupt erst möglich machen. Behalte diese Entwicklungen im Hinterkopf.`,
+                        likelihood: 'Mittel'
+                    });
+                }
+            }
+
+            // Climate and environment
+            if (lowerNews.includes('klima') || lowerNews.includes('umwelt') || lowerNews.includes('co2') ||
+                lowerNews.includes('energie')) {
+                effects.push({
+                    title: '🌍 Klimapolitik-Ketteneffekte',
+                    description: `Klimapolitik betrifft buchstäblich jeden Aspekt deines Lebens indirekt: Energiepreise → Produktpreise → Kaufkraft. CO2-Steuer → Teurere Heizung → Höhere Nebenkosten. Förderung erneuerbarer Energien → Neue Jobs → Veränderte Wirtschaftsstruktur. Als ${userProfile.location}-Bewohner${userProfile.housing ? ' in einer ' + userProfile.housing : ''}: Diese Entwicklungen werden deine monatlichen Fixkosten in den nächsten Jahren spürbar verändern.`,
+                    likelihood: 'Sehr Hoch'
+                });
+            }
+
+            // Technology and digitalization
+            if (lowerNews.includes('digital') || lowerNews.includes('ki') || lowerNews.includes('technologie') ||
+                lowerNews.includes('internet') || lowerNews.includes('it')) {
+                if (userProfile.job) {
+                    const jobLower = userProfile.job.toLowerCase();
+                    const isTechJob = jobLower.includes('it') || jobLower.includes('tech') ||
+                                     jobLower.includes('entwickler') || jobLower.includes('programm');
+
+                    if (isTechJob) {
+                        effects.push({
+                            title: '🤖 Tech-Boom Nebenwirkungen',
+                            description: `Als ${userProfile.job} profitierst du direkt vom Tech-Boom. Aber Vorsicht bei indirekten Effekten: Mehr Tech-Jobs → Mehr gut verdienende Menschen in deiner Stadt → Höhere Mieten und Lebenshaltungskosten. Der "Tech-Gentrification"-Effekt ist in vielen Städten sichtbar. Dein Gehalt steigt, aber auch deine Umgebung wird teurer.`,
+                            likelihood: 'Hoch'
+                        });
+                    } else {
+                        effects.push({
+                            title: '🤖 Digitalisierungs-Druck',
+                            description: `Auch als ${userProfile.job} spürst du Digitalisierung: Neue Tools, die du lernen musst. Prozesse, die sich ändern. Vielleicht fallen Aufgaben weg, neue entstehen. Der indirekte Druck ist real: Nicht digitalisierte Unternehmen verlieren an Wettbewerbsfähigkeit. Sei proaktiv beim Lernen neuer digitaler Skills - es sichert deine Position.`,
+                            likelihood: 'Mittel bis Hoch'
+                        });
+                    }
+                }
+            }
+
+            // Healthcare and aging society
+            if (lowerNews.includes('gesundheit') || lowerNews.includes('pflege') || lowerNews.includes('kranken') ||
+                lowerNews.includes('rente')) {
+                if (userProfile.age && (userProfile.age === '46-55' || userProfile.age === '56-65' || userProfile.age === '66+')) {
+                    effects.push({
+                        title: '🏥 Alterungs-Gesellschaft-Effekt',
+                        description: `In deiner Altersgruppe (${userProfile.age}) werden Gesundheits- und Pflegethemen immer relevanter. Indirekt betrifft dich: Mehr Pflegebedarf → Höhere Beiträge für alle → Weniger Netto. ABER auch: Mehr Investitionen in altersgerechte Infrastruktur, mehr politische Macht deiner Altersgruppe. Die Gesellschaft passt sich an - das schafft auch Chancen.`,
+                        likelihood: 'Hoch'
+                    });
+                } else if (userProfile.familyStatus && userProfile.familyStatus !== 'Single') {
+                    effects.push({
+                        title: '🏥 Familien-Pflege-Risiko',
+                        description: `Pflege ist oft Familienaufgabe. Selbst wenn du jung und gesund bist: Vielleicht müssen deine Eltern irgendwann gepflegt werden. Pflegepolitik beeinflusst, ob du das finanziell und zeitlich stemmen kannst. Beobachte Entwicklungen bei Pflegegeld und Pflegezeit - sie könnten deine Lebensplanung in 5-15 Jahren massiv beeinflussen.`,
+                        likelihood: 'Mittel'
+                    });
+                }
+            }
+
+            // Tax and fiscal policy
+            if (lowerNews.includes('steuer') || lowerNews.includes('abgabe') || lowerNews.includes('beitrag')) {
+                let taxEffect = {
+                    title: '💶 Steuer-Umverteilungs-Effekt',
+                    description: '',
+                    likelihood: 'Hoch'
+                };
+
+                if (userProfile.children && userProfile.children !== '0') {
+                    taxEffect.description = `Steuerpolitik ist Umverteilung. Selbst wenn dich eine Steuer nicht direkt trifft: Das Geld fließt irgendwo hin. Mit ${userProfile.children} Kind(ern) könntest du von Familienförderung profitieren, die durch andere Steuern finanziert wird. Oder umgekehrt: Du zahlst mehr, damit andere entlastet werden. Behalte die Gesamtrechnung im Blick - nicht nur die Schlagzeile.`;
+                } else {
+                    taxEffect.description = `Jede Steueränderung verschiebt, wer was zahlt. Als ${userProfile.familyStatus || 'Person'} ohne Kinder profitierst du nicht von Familienförderung, zahlst aber indirekt mit. Dafür profitierst du von Infrastruktur, die durch Steuern finanziert wird. Das System ist komplex - wichtig ist: Deine Abgabenlast ändert sich durch viele kleine Anpassungen, nicht nur die große Reform.`;
+                }
+                effects.push(taxEffect);
+            }
+
+            return effects;
         }
 
         function displayRelevanceAnalysis(analysis, newsTitle = null) {
             const scoreClass = analysis.score >= 70 ? 'high' : (analysis.score >= 40 ? 'medium' : 'low');
 
+            const personalContextHTML = analysis.personalContext ? `
+                <div style="background: linear-gradient(135deg, rgba(0, 245, 255, 0.08) 0%, rgba(255, 0, 110, 0.08) 100%); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(0, 245, 255, 0.2);">
+                    <div style="font-weight: bold; color: #00f5ff; margin-bottom: 8px; font-size: 13px;">👤 DEINE LEBENSSITUATION</div>
+                    <div style="font-size: 14px; line-height: 1.8; color: #e0e0e0;">${analysis.personalContext}</div>
+                </div>
+            ` : '';
+
             const detailedImpactsHTML = analysis.detailedImpacts.map(impact => `
-                <div style="background: #f9f9f9; padding: 15px; border-radius: 10px; margin: 10px 0; border-left: 3px solid #667eea;">
-                    <div style="font-weight: bold; color: #667eea; margin-bottom: 8px;">${impact.title}</div>
-                    <div style="font-size: 14px; line-height: 1.6; margin-bottom: 8px;">${impact.description}</div>
-                    <div style="font-size: 13px; color: #555; font-style: italic;">💭 ${impact.impact}</div>
+                <div style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 10px; margin: 10px 0; border-left: 3px solid #00f5ff; backdrop-filter: blur(10px);">
+                    <div style="font-weight: bold; color: #00f5ff; margin-bottom: 8px;">${impact.title}</div>
+                    <div style="font-size: 14px; line-height: 1.6; margin-bottom: 8px; color: #e0e0e0;">${impact.description}</div>
+                    <div style="font-size: 13px; color: #b0b0b0; font-style: italic;">💭 ${impact.impact}</div>
                 </div>
             `).join('');
 
+            const indirectEffectsHTML = analysis.indirectEffects && analysis.indirectEffects.length > 0 ? `
+                <div style="margin-top: 25px; padding-top: 20px; border-top: 2px solid rgba(255, 0, 110, 0.3);">
+                    <div style="font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #ff006e; display: flex; align-items: center; gap: 8px;">
+                        <span>🔗</span>
+                        <span>Indirekte Effekte (2. Ordnung)</span>
+                    </div>
+                    <div style="font-size: 13px; color: #b0b0b0; margin-bottom: 15px; font-style: italic;">
+                        Diese Kettenreaktionen könnten dein Leben beeinflussen, auch wenn du nicht direkt betroffen bist:
+                    </div>
+                    ${analysis.indirectEffects.map(effect => `
+                        <div style="background: rgba(255, 0, 110, 0.05); padding: 15px; border-radius: 10px; margin: 12px 0; border-left: 3px solid #ff006e;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                <div style="font-weight: bold; color: #ff006e; flex: 1;">${effect.title}</div>
+                                <div style="background: rgba(255, 0, 110, 0.2); color: #ff006e; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; margin-left: 10px;">
+                                    ${effect.likelihood}
+                                </div>
+                            </div>
+                            <div style="font-size: 14px; line-height: 1.7; color: #e0e0e0;">${effect.description}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : '';
+
             const whatToDoHTML = analysis.whatToDo.length > 0 ? `
-                <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-top: 15px; border-left: 3px solid #ffc107;">
-                    <div style="font-weight: bold; color: #856404; margin-bottom: 10px;">✅ Was du tun solltest:</div>
+                <div style="background: rgba(255, 193, 7, 0.1); padding: 15px; border-radius: 10px; margin-top: 20px; border-left: 3px solid #ffc107;">
+                    <div style="font-weight: bold; color: #ffc107; margin-bottom: 10px;">✅ Was du tun solltest:</div>
                     <ul style="margin: 0; padding-left: 20px;">
-                        ${analysis.whatToDo.map(action => `<li style="margin: 5px 0; color: #856404;">${action}</li>`).join('')}
+                        ${analysis.whatToDo.map(action => `<li style="margin: 8px 0; color: #e0e0e0; line-height: 1.6;">${action}</li>`).join('')}
                     </ul>
                 </div>
             ` : '';
 
             const card = `
                 <div class="relevance-card" style="max-width: 95%;">
-                    ${newsTitle ? `<div style="font-size: 15px; color: #333; margin-bottom: 15px; line-height: 1.5; font-weight: 500; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">${newsTitle}</div>` : ''}
+                    ${newsTitle ? `<div style="font-size: 15px; color: #e0e0e0; margin-bottom: 15px; line-height: 1.5; font-weight: 500; border-bottom: 2px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px;">${newsTitle}</div>` : ''}
+
+                    ${personalContextHTML}
 
                     <div class="relevance-header">🎯 Relevanz-Analyse</div>
 
@@ -1443,23 +1696,25 @@
                     </div>
 
                     <div class="relevance-reasons" style="margin-bottom: 20px;">
-                        <strong>${analysis.personalImpact}</strong>
+                        <strong style="color: #e0e0e0;">${analysis.personalImpact}</strong>
                     </div>
 
                     ${analysis.detailedImpacts.length > 0 ? `
                         <div style="margin-top: 20px;">
-                            <div style="font-weight: bold; font-size: 15px; margin-bottom: 15px; color: #333;">🔍 Wie betrifft dich das konkret?</div>
+                            <div style="font-weight: bold; font-size: 15px; margin-bottom: 15px; color: #00f5ff;">🎯 Direkte Auswirkungen (1. Ordnung)</div>
                             ${detailedImpactsHTML}
                         </div>
                     ` : ''}
 
+                    ${indirectEffectsHTML}
+
                     ${whatToDoHTML}
 
                     ${analysis.reasons.length > 0 ? `
-                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
-                            <div style="font-size: 13px; color: #666; font-weight: 500; margin-bottom: 8px;">📌 Erkannte Übereinstimmungen:</div>
+                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                            <div style="font-size: 13px; color: #b0b0b0; font-weight: 500; margin-bottom: 8px;">📌 Erkannte Übereinstimmungen:</div>
                             <ul style="margin: 0; padding-left: 20px;">
-                                ${analysis.reasons.map(r => `<li style="margin: 5px 0; font-size: 13px; color: #666;">${r}</li>`).join('')}
+                                ${analysis.reasons.map(r => `<li style="margin: 5px 0; font-size: 13px; color: #b0b0b0;">${r}</li>`).join('')}
                             </ul>
                         </div>
                     ` : ''}
