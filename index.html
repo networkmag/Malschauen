@@ -996,6 +996,8 @@
                 news: newsText,
                 score: 0,
                 reasons: [],
+                detailedImpacts: [],
+                whatToDo: [],
                 personalImpact: ''
             };
 
@@ -1006,6 +1008,11 @@
             if (userProfile.location && lowerNews.includes(userProfile.location.toLowerCase())) {
                 scorePoints += 25;
                 analysis.reasons.push(`📍 Betrifft direkt deinen Wohnort: ${userProfile.location}`);
+                analysis.detailedImpacts.push({
+                    title: '🌍 Direkte lokale Auswirkung',
+                    description: `Diese Nachricht betrifft ${userProfile.location}, wo du lebst. Änderungen in deiner Region können dein tägliches Leben, deine Mobilität und deine lokalen Kosten direkt beeinflussen.`,
+                    impact: `Du wirst dies unmittelbar in deinem Alltag spüren - sei es beim Einkaufen, auf dem Weg zur Arbeit oder bei lokalen Dienstleistungen.`
+                });
             }
 
             // Job/Industry relevance
@@ -1015,6 +1022,12 @@
                     if (keyword.length > 3 && lowerNews.includes(keyword)) {
                         scorePoints += 20;
                         analysis.reasons.push(`💼 Relevant für deine Branche: ${userProfile.job}`);
+                        analysis.detailedImpacts.push({
+                            title: '💼 Berufliche Relevanz',
+                            description: `Als ${userProfile.job} bist du direkt von dieser Entwicklung betroffen. Dies könnte Auswirkungen auf deine Arbeitssituation, Karrierechancen oder Branchentrends haben.`,
+                            impact: `Dies könnte bedeuten: Neue Chancen für deine Karriere, Veränderungen in deinem Arbeitsalltag, oder die Notwendigkeit, neue Fähigkeiten zu erlernen. Beobachte, wie sich dies in deiner Branche entwickelt.`
+                        });
+                        analysis.whatToDo.push('💡 Sprich mit Kollegen über diese Entwicklung und wie sie eure Arbeit beeinflussen könnte');
                         break;
                     }
                 }
@@ -1032,6 +1045,11 @@
                 }
                 if (interestMatch) {
                     analysis.reasons.push(`🎯 Passt zu deinen Interessen: ${userProfile.interests}`);
+                    analysis.detailedImpacts.push({
+                        title: '🎯 Interessenübereinstimmung',
+                        description: `Diese Nachricht deckt sich mit deinen persönlichen Interessen (${userProfile.interests}). Was dich interessiert, beeinflusst oft auch deine Freizeit, Ausgaben und sozialen Aktivitäten.`,
+                        impact: `Dies könnte neue Möglichkeiten eröffnen oder Veränderungen in Bereichen mit sich bringen, die dir wichtig sind.`
+                    });
                 }
             }
 
@@ -1047,6 +1065,12 @@
                 }
                 if (concernMatch) {
                     analysis.reasons.push(`⚠️ Betrifft deine Sorgenthemen: ${userProfile.concerns}`);
+                    analysis.detailedImpacts.push({
+                        title: '⚠️ Wichtiges Sorgenthema',
+                        description: `Diese Nachricht behandelt Themen, die dir besonders am Herzen liegen: ${userProfile.concerns}. Was dich beschäftigt, hat oft direkten Einfluss auf deine Lebensqualität und Zukunftsplanung.`,
+                        impact: `Die Entwicklung könnte deine Sorgen verstärken oder lindern. Es ist wichtig, informiert zu bleiben und gegebenenfalls zu handeln.`
+                    });
+                    analysis.whatToDo.push('📋 Informiere dich weiter und überlege, ob du aktiv werden solltest');
                 }
             }
 
@@ -1057,6 +1081,12 @@
                     if (lowerNews.includes(keyword)) {
                         scorePoints += 15;
                         analysis.reasons.push(`👨‍👩‍👧‍👦 Relevant für Familien mit ${userProfile.children} Kind(ern)`);
+                        analysis.detailedImpacts.push({
+                            title: '👨‍👩‍👧‍👦 Familien-Impact',
+                            description: `Mit ${userProfile.children} Kind(ern) bist du besonders von Familien-Themen betroffen. Änderungen bei Bildung, Betreuung oder Familienleistungen beeinflussen deinen Alltag und dein Budget direkt.`,
+                            impact: `Dies könnte bedeuten: Mehr oder weniger Kosten, bessere oder schlechtere Betreuungsmöglichkeiten, Änderungen im Familienalltag. Prüfe, wie dies deine Familie konkret betrifft.`
+                        });
+                        analysis.whatToDo.push('👪 Berechne, wie sich dies finanziell auf deine Familie auswirkt');
                         break;
                     }
                 }
@@ -1076,6 +1106,20 @@
                     if (lowerNews.includes(keyword)) {
                         scorePoints += 10;
                         analysis.reasons.push(`🏠 Relevant für ${userProfile.housing}-Bewohner`);
+
+                        const housingImpact = {
+                            'Mietwohnung': 'Als Mieter könnten sich deine monatlichen Kosten ändern oder neue Rechte/Pflichten entstehen. Dies beeinflusst direkt dein verfügbares Budget.',
+                            'Eigentumswohnung': 'Als Eigentümer einer Wohnung können sich Wertentwicklung, Nebenkosten oder steuerliche Aspekte ändern. Dies betrifft dein Vermögen direkt.',
+                            'Miethaus': 'Als Hausmieter könnten sich Mietkosten oder Mietrechte ändern. Dies kann erhebliche Auswirkungen auf deine monatlichen Ausgaben haben.',
+                            'Eigenheim': 'Als Hausbesitzer sind Grundsteuer, Immobilienwert und Instandhaltungskosten betroffen. Dies beeinflusst dein Vermögen und deine Lebensplanung.'
+                        };
+
+                        analysis.detailedImpacts.push({
+                            title: '🏠 Wohn-Situation',
+                            description: `Du lebst in einer ${userProfile.housing}. ${housingImpact[userProfile.housing] || 'Diese Nachricht könnte deine Wohnsituation beeinflussen.'}`,
+                            impact: 'Prüfe, ob du Maßnahmen ergreifen musst, um vorbereitet zu sein oder Vorteile zu nutzen.'
+                        });
+                        analysis.whatToDo.push('🏠 Prüfe deine Verträge und informiere dich über deine Rechte');
                         break;
                     }
                 }
@@ -1088,6 +1132,24 @@
                     if (lowerNews.includes(keyword)) {
                         scorePoints += 10;
                         analysis.reasons.push(`🚗 Relevant für Autobesitzer (${userProfile.car})`);
+
+                        const carType = userProfile.car;
+                        let carImpact = 'Diese Änderung könnte deine Mobilität und Kosten beeinflussen.';
+
+                        if (carType.includes('Elektro')) {
+                            carImpact = 'Als Elektroauto-Fahrer könnten sich Förderungen, Ladeinfrastruktur oder Stromkosten ändern. Dies beeinflusst die Wirtschaftlichkeit deines Fahrzeugs.';
+                        } else if (carType.includes('Verbrenner')) {
+                            carImpact = 'Als Verbrenner-Fahrer könnten Spritpreise, Fahrverbote oder Steuern dich betreffen. Überlege, ob ein Umstieg sinnvoll wird.';
+                        } else if (carType.includes('Hybrid')) {
+                            carImpact = 'Als Hybrid-Fahrer bist du von Entwicklungen bei Benzin UND Strom betroffen. Beobachte beide Märkte.';
+                        }
+
+                        analysis.detailedImpacts.push({
+                            title: '🚗 Mobilität & Auto',
+                            description: `Du besitzt ein ${carType}. ${carImpact}`,
+                            impact: 'Berechne, wie sich Kostenänderungen auf dein Jahresbudget auswirken und ob Anpassungen nötig sind.'
+                        });
+                        analysis.whatToDo.push('🚗 Kalkuliere die finanziellen Auswirkungen auf deine Mobilität');
                         break;
                     }
                 }
@@ -1104,11 +1166,25 @@
                     '66+': ['rente', 'pension', 'gesundheit', 'pflege']
                 };
 
+                const ageImpacts = {
+                    '18-25': 'In deiner Lebensphase geht es um Ausbildung und Berufseinstieg. Diese Nachricht könnte deine Startchancen, Ausbildungsmöglichkeiten oder ersten Karriereschritte beeinflussen.',
+                    '26-35': 'Du bist in der Aufbauphase deines Lebens. Karriere, erste Immobilie oder Familiengründung stehen im Fokus - diese Nachricht könnte diese Pläne beeinflussen.',
+                    '36-45': 'Du bist mitten im Berufsleben mit Familie. Diese Nachricht kann Karriere, Familienfinanzen und langfristige Planung betreffen.',
+                    '46-55': 'Du denkst vermehrt an Absicherung und Altersvorsorge. Diese Nachricht könnte deine finanzielle Zukunft und Gesundheitsvorsorge beeinflussen.',
+                    '56-65': 'Der Ruhestand rückt näher. Diese Nachricht könnte deine Rente, Altersvorsorge oder den Übergang in den Ruhestand betreffen.',
+                    '66+': 'Im Ruhestand sind Rente, Gesundheit und Pflege zentral. Diese Nachricht könnte deine Lebensqualität und finanzielle Sicherheit beeinflussen.'
+                };
+
                 const keywords = ageKeywords[userProfile.age] || [];
                 for (let keyword of keywords) {
                     if (lowerNews.includes(keyword)) {
                         scorePoints += 10;
                         analysis.reasons.push(`👤 Altersrelevant für Gruppe ${userProfile.age}`);
+                        analysis.detailedImpacts.push({
+                            title: '👤 Lebensphase-Relevanz',
+                            description: `Mit ${userProfile.age} Jahren bist du in einer bestimmten Lebensphase. ${ageImpacts[userProfile.age] || 'Diese Nachricht ist für deine Altersgruppe relevant.'}`,
+                            impact: 'Überlege, wie dies deine kurz- und langfristige Lebensplanung beeinflusst.'
+                        });
                         break;
                     }
                 }
@@ -1119,17 +1195,27 @@
 
             // Generate personal impact message
             if (analysis.score >= 70) {
-                analysis.personalImpact = 'Diese Nachricht ist SEHR RELEVANT für dich! Sie betrifft mehrere Aspekte deines Lebens direkt.';
+                analysis.personalImpact = 'Diese Nachricht ist SEHR RELEVANT für dich! Sie betrifft mehrere Aspekte deines Lebens direkt und wird wahrscheinlich konkrete Änderungen in deinem Alltag mit sich bringen.';
             } else if (analysis.score >= 40) {
-                analysis.personalImpact = 'Diese Nachricht hat MITTLERE RELEVANZ für dich. Einige Aspekte könnten dich betreffen.';
+                analysis.personalImpact = 'Diese Nachricht hat MITTLERE RELEVANZ für dich. Einige Aspekte könnten dich betreffen und es lohnt sich, die Entwicklung im Auge zu behalten.';
             } else if (analysis.score >= 15) {
-                analysis.personalImpact = 'Diese Nachricht hat GERINGE RELEVANZ für dich. Es gibt einige Berührungspunkte zu deinem Leben.';
+                analysis.personalImpact = 'Diese Nachricht hat GERINGE RELEVANZ für dich. Es gibt einige Berührungspunkte zu deinem Leben, aber der direkte Einfluss ist begrenzt.';
             } else {
-                analysis.personalImpact = 'Diese Nachricht hat SEHR GERINGE direkte Relevanz für dich basierend auf deinem Profil.';
+                analysis.personalImpact = 'Diese Nachricht hat SEHR GERINGE direkte Relevanz für dich basierend auf deinem Profil. Der Einfluss auf dein Leben ist wahrscheinlich minimal.';
             }
 
             if (analysis.reasons.length === 0) {
                 analysis.reasons.push('Keine direkten Übereinstimmungen mit deinem Profil gefunden');
+                analysis.detailedImpacts.push({
+                    title: '📊 Allgemeine Information',
+                    description: 'Diese Nachricht hat keine direkte Verbindung zu deinen persönlichen Umständen.',
+                    impact: 'Du kannst dies als allgemeine Information betrachten, ohne dass unmittelbare Handlungen erforderlich sind.'
+                });
+            }
+
+            // Add general action item if score is high
+            if (analysis.score >= 70 && analysis.whatToDo.length === 0) {
+                analysis.whatToDo.push('⚡ Diese Nachricht ist hochrelevant - informiere dich weiter und handle proaktiv!');
             }
 
             return analysis;
@@ -1138,9 +1224,27 @@
         function displayRelevanceAnalysis(analysis, newsTitle = null) {
             const scoreClass = analysis.score >= 70 ? 'high' : (analysis.score >= 40 ? 'medium' : 'low');
 
+            const detailedImpactsHTML = analysis.detailedImpacts.map(impact => `
+                <div style="background: #f9f9f9; padding: 15px; border-radius: 10px; margin: 10px 0; border-left: 3px solid #667eea;">
+                    <div style="font-weight: bold; color: #667eea; margin-bottom: 8px;">${impact.title}</div>
+                    <div style="font-size: 14px; line-height: 1.6; margin-bottom: 8px;">${impact.description}</div>
+                    <div style="font-size: 13px; color: #555; font-style: italic;">💭 ${impact.impact}</div>
+                </div>
+            `).join('');
+
+            const whatToDoHTML = analysis.whatToDo.length > 0 ? `
+                <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-top: 15px; border-left: 3px solid #ffc107;">
+                    <div style="font-weight: bold; color: #856404; margin-bottom: 10px;">✅ Was du tun solltest:</div>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        ${analysis.whatToDo.map(action => `<li style="margin: 5px 0; color: #856404;">${action}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : '';
+
             const card = `
-                <div class="relevance-card">
-                    ${newsTitle ? `<div style="font-size: 14px; color: #666; margin-bottom: 10px; line-height: 1.4;">${newsTitle}</div>` : ''}
+                <div class="relevance-card" style="max-width: 95%;">
+                    ${newsTitle ? `<div style="font-size: 15px; color: #333; margin-bottom: 15px; line-height: 1.5; font-weight: 500; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">${newsTitle}</div>` : ''}
+
                     <div class="relevance-header">🎯 Relevanz-Analyse</div>
 
                     <div class="relevance-score">
@@ -1150,12 +1254,27 @@
                         </div>
                     </div>
 
-                    <div class="relevance-reasons">
+                    <div class="relevance-reasons" style="margin-bottom: 20px;">
                         <strong>${analysis.personalImpact}</strong>
-                        <ul>
-                            ${analysis.reasons.map(r => `<li>${r}</li>`).join('')}
-                        </ul>
                     </div>
+
+                    ${analysis.detailedImpacts.length > 0 ? `
+                        <div style="margin-top: 20px;">
+                            <div style="font-weight: bold; font-size: 15px; margin-bottom: 15px; color: #333;">🔍 Wie betrifft dich das konkret?</div>
+                            ${detailedImpactsHTML}
+                        </div>
+                    ` : ''}
+
+                    ${whatToDoHTML}
+
+                    ${analysis.reasons.length > 0 ? `
+                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                            <div style="font-size: 13px; color: #666; font-weight: 500; margin-bottom: 8px;">📌 Erkannte Übereinstimmungen:</div>
+                            <ul style="margin: 0; padding-left: 20px;">
+                                ${analysis.reasons.map(r => `<li style="margin: 5px 0; font-size: 13px; color: #666;">${r}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
                 </div>
             `;
 
