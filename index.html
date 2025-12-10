@@ -1065,7 +1065,8 @@
                 newsDatabase = demoNews.map(news => ({
                     ...news,
                     analysis: generateRelevanceAnalysis(news.title)
-                }));
+                }))
+                .filter(news => news.analysis.score > 0); // Filter out 0% relevance
 
                 // Sort by relevance
                 newsDatabase.sort((a, b) => b.analysis.score - a.analysis.score);
@@ -1078,18 +1079,25 @@
         function displayNewsFeed() {
             const highRelevance = newsDatabase.filter(n => n.analysis.score >= 70).length;
             const medRelevance = newsDatabase.filter(n => n.analysis.score >= 40 && n.analysis.score < 70).length;
-            const lowRelevance = newsDatabase.filter(n => n.analysis.score < 40).length;
+            const lowRelevance = newsDatabase.filter(n => n.analysis.score >= 15 && n.analysis.score < 40).length;
+            const trashRelevance = newsDatabase.filter(n => n.analysis.score > 0 && n.analysis.score < 15).length;
 
-            addMessage(`✅ Analyse abgeschlossen!\n\n🔥 FIRE: ${highRelevance}\n🌶️ SPICY: ${medRelevance}\n😴 MEH: ${lowRelevance}`);
+            let summary = `✅ Analyse abgeschlossen! Von ${demoNews.length} News sind ${newsDatabase.length} für dich relevant:\n\n🔥 FIRE: ${highRelevance}`;
+            if (medRelevance > 0) summary += `\n🌶️ SPICY: ${medRelevance}`;
+            if (lowRelevance > 0) summary += `\n😴 MEH: ${lowRelevance}`;
+            if (trashRelevance > 0) summary += `\n💩 TRASH: ${trashRelevance}`;
+
+            addMessage(summary);
 
             const feedHTML = `
                 <div class="news-feed">
                     <div class="news-controls">
                         <div class="filter-buttons">
                             <button class="filter-btn active" onclick="filterNews('all')">Alle (${newsDatabase.length})</button>
-                            <button class="filter-btn" onclick="filterNews('high')">🔥 FIRE (${highRelevance})</button>
-                            <button class="filter-btn" onclick="filterNews('medium')">🌶️ SPICY (${medRelevance})</button>
-                            <button class="filter-btn" onclick="filterNews('low')">😴 MEH (${lowRelevance})</button>
+                            ${highRelevance > 0 ? `<button class="filter-btn" onclick="filterNews('high')">🔥 FIRE (${highRelevance})</button>` : ''}
+                            ${medRelevance > 0 ? `<button class="filter-btn" onclick="filterNews('medium')">🌶️ SPICY (${medRelevance})</button>` : ''}
+                            ${lowRelevance > 0 ? `<button class="filter-btn" onclick="filterNews('low')">😴 MEH (${lowRelevance})</button>` : ''}
+                            ${trashRelevance > 0 ? `<button class="filter-btn" onclick="filterNews('trash')">💩 TRASH (${trashRelevance})</button>` : ''}
                         </div>
                     </div>
                     <div id="newsList">
@@ -1139,7 +1147,9 @@
             } else if (filter === 'medium') {
                 filtered = newsDatabase.filter(n => n.analysis.score >= 40 && n.analysis.score < 70);
             } else if (filter === 'low') {
-                filtered = newsDatabase.filter(n => n.analysis.score < 40);
+                filtered = newsDatabase.filter(n => n.analysis.score >= 15 && n.analysis.score < 40);
+            } else if (filter === 'trash') {
+                filtered = newsDatabase.filter(n => n.analysis.score > 0 && n.analysis.score < 15);
             }
 
             const newsList = document.getElementById('newsList');
