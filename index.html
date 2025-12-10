@@ -1184,9 +1184,9 @@
         }
 
         function displayNewsFeed() {
-            const highRelevance = newsDatabase.filter(n => n.analysis.score >= 70).length;
-            const medRelevance = newsDatabase.filter(n => n.analysis.score >= 40 && n.analysis.score < 70).length;
-            const lowRelevance = newsDatabase.filter(n => n.analysis.score >= 15 && n.analysis.score < 40).length;
+            const highRelevance = newsDatabase.filter(n => n.analysis.score >= 60).length;
+            const medRelevance = newsDatabase.filter(n => n.analysis.score >= 35 && n.analysis.score < 60).length;
+            const lowRelevance = newsDatabase.filter(n => n.analysis.score >= 15 && n.analysis.score < 35).length;
             const trashRelevance = newsDatabase.filter(n => n.analysis.score > 0 && n.analysis.score < 15).length;
 
             let summary = `✅ Analyse abgeschlossen! Von ${demoNews.length} News sind ${newsDatabase.length} für dich relevant:\n\n🔥 FIRE: ${highRelevance}`;
@@ -1218,8 +1218,8 @@
 
         function renderNewsList(news) {
             return news.map((item, index) => {
-                const scoreClass = item.analysis.score >= 70 ? 'high' : (item.analysis.score >= 40 ? 'medium' : 'low');
-                const barClass = item.analysis.score >= 70 ? 'high' : (item.analysis.score >= 40 ? 'medium' : 'low');
+                const scoreClass = item.analysis.score >= 60 ? 'high' : (item.analysis.score >= 35 ? 'medium' : 'low');
+                const barClass = item.analysis.score >= 60 ? 'high' : (item.analysis.score >= 35 ? 'medium' : 'low');
 
                 return `
                     <div class="news-item ${scoreClass}" onclick="showNewsDetails(${index})">
@@ -1250,11 +1250,11 @@
             let filtered = newsDatabase;
 
             if (filter === 'high') {
-                filtered = newsDatabase.filter(n => n.analysis.score >= 70);
+                filtered = newsDatabase.filter(n => n.analysis.score >= 60);
             } else if (filter === 'medium') {
-                filtered = newsDatabase.filter(n => n.analysis.score >= 40 && n.analysis.score < 70);
+                filtered = newsDatabase.filter(n => n.analysis.score >= 35 && n.analysis.score < 60);
             } else if (filter === 'low') {
-                filtered = newsDatabase.filter(n => n.analysis.score >= 15 && n.analysis.score < 40);
+                filtered = newsDatabase.filter(n => n.analysis.score >= 15 && n.analysis.score < 35);
             } else if (filter === 'trash') {
                 filtered = newsDatabase.filter(n => n.analysis.score > 0 && n.analysis.score < 15);
             }
@@ -1301,12 +1301,30 @@
             const lowerNews = newsText.toLowerCase();
             let scorePoints = 0;
 
+            // Base points - every news gets some relevance
+            scorePoints += 5;
+
             // Generate personal context introduction
             analysis.personalContext = generatePersonalContext();
 
-            // Location relevance
+            // General economic relevance - if user works and news is about economy
+            if (userProfile.job && (lowerNews.includes('wirtschaft') || lowerNews.includes('konjunktur') ||
+                lowerNews.includes('inflation') || lowerNews.includes('gehalt') || lowerNews.includes('lohn') ||
+                lowerNews.includes('preis') || lowerNews.includes('markt') || lowerNews.includes('unternehmen'))) {
+                scorePoints += 15;
+                analysis.reasons.push(`💰 Wirtschaftsnachricht - relevant für Berufstätige`);
+            }
+
+            // General political relevance - everyone is affected by politics
+            if (lowerNews.includes('regierung') || lowerNews.includes('bundestag') ||
+                lowerNews.includes('gesetz') || lowerNews.includes('reform') || lowerNews.includes('politik')) {
+                scorePoints += 10;
+                analysis.reasons.push(`🏛️ Politische Entscheidung - betrifft alle Bürger`);
+            }
+
+            // Location relevance - INCREASED POINTS
             if (userProfile.location && lowerNews.includes(userProfile.location.toLowerCase())) {
-                scorePoints += 25;
+                scorePoints += 35;
                 analysis.reasons.push(`📍 Betrifft direkt deinen Wohnort: ${userProfile.location}`);
                 analysis.detailedImpacts.push({
                     title: '🌍 Direkte lokale Auswirkung',
@@ -1315,12 +1333,15 @@
                 });
             }
 
-            // Job/Industry relevance
+            // Job/Industry relevance - INCREASED POINTS + MORE KEYWORDS
             if (userProfile.job) {
                 const jobKeywords = userProfile.job.toLowerCase().split(' ');
+                const broadJobKeywords = ['arbeit', 'job', 'beruf', 'karriere', 'arbeitsmarkt', 'beschäftigung'];
+
+                // Specific job match
                 for (let keyword of jobKeywords) {
                     if (keyword.length > 3 && lowerNews.includes(keyword)) {
-                        scorePoints += 20;
+                        scorePoints += 30;
                         analysis.reasons.push(`💼 Relevant für deine Branche: ${userProfile.job}`);
                         analysis.detailedImpacts.push({
                             title: '💼 Berufliche Relevanz',
@@ -1331,15 +1352,26 @@
                         break;
                     }
                 }
+
+                // Broad job-related keywords
+                if (scorePoints < 30) { // Only if no specific match yet
+                    for (let keyword of broadJobKeywords) {
+                        if (lowerNews.includes(keyword)) {
+                            scorePoints += 15;
+                            analysis.reasons.push(`💼 Arbeitsmarkt-Thema - relevant für alle Berufstätigen`);
+                            break;
+                        }
+                    }
+                }
             }
 
-            // Interests relevance
+            // Interests relevance - INCREASED POINTS
             if (userProfile.interests) {
                 const interests = userProfile.interests.split(',').map(i => i.trim().toLowerCase());
                 let interestMatch = false;
                 for (let interest of interests) {
                     if (lowerNews.includes(interest)) {
-                        scorePoints += 15;
+                        scorePoints += 25;
                         interestMatch = true;
                     }
                 }
@@ -1353,13 +1385,13 @@
                 }
             }
 
-            // Concerns relevance
+            // Concerns relevance - INCREASED POINTS
             if (userProfile.concerns) {
                 const concerns = userProfile.concerns.split(',').map(c => c.trim().toLowerCase());
                 let concernMatch = false;
                 for (let concern of concerns) {
                     if (lowerNews.includes(concern)) {
-                        scorePoints += 20;
+                        scorePoints += 30;
                         concernMatch = true;
                     }
                 }
@@ -1374,12 +1406,12 @@
                 }
             }
 
-            // Family relevance
+            // Family relevance - INCREASED POINTS + MORE KEYWORDS
             if (userProfile.children && userProfile.children !== '0') {
-                const familyKeywords = ['kinder', 'schule', 'bildung', 'familie', 'eltern', 'kindergeld', 'kita'];
+                const familyKeywords = ['kinder', 'schule', 'bildung', 'familie', 'eltern', 'kindergeld', 'kita', 'betreuung', 'erziehung', 'jugend'];
                 for (let keyword of familyKeywords) {
                     if (lowerNews.includes(keyword)) {
-                        scorePoints += 15;
+                        scorePoints += 25;
                         analysis.reasons.push(`👨‍👩‍👧‍👦 Relevant für Familien mit ${userProfile.children} Kind(ern)`);
                         analysis.detailedImpacts.push({
                             title: '👨‍👩‍👧‍👦 Familien-Impact',
@@ -1392,19 +1424,19 @@
                 }
             }
 
-            // Housing relevance
+            // Housing relevance - INCREASED POINTS + MORE KEYWORDS
             if (userProfile.housing) {
                 const housingKeywords = {
-                    'Mietwohnung': ['miete', 'mietpreis', 'vermieter', 'wohnung'],
-                    'Eigentumswohnung': ['eigentum', 'immobilie', 'wohneigentum', 'hausgeld'],
-                    'Miethaus': ['miete', 'haus', 'vermieter'],
-                    'Eigenheim': ['immobilie', 'haus', 'eigentum', 'grundsteuer', 'eigenheim']
+                    'Mietwohnung': ['miete', 'mietpreis', 'vermieter', 'wohnung', 'nebenkosten', 'kaution'],
+                    'Eigentumswohnung': ['eigentum', 'immobilie', 'wohneigentum', 'hausgeld', 'wohnung', 'wert'],
+                    'Miethaus': ['miete', 'haus', 'vermieter', 'nebenkosten'],
+                    'Eigenheim': ['immobilie', 'haus', 'eigentum', 'grundsteuer', 'eigenheim', 'wert', 'kredit']
                 };
 
                 const keywords = housingKeywords[userProfile.housing] || [];
                 for (let keyword of keywords) {
                     if (lowerNews.includes(keyword)) {
-                        scorePoints += 10;
+                        scorePoints += 20;
                         analysis.reasons.push(`🏠 Relevant für ${userProfile.housing}-Bewohner`);
 
                         const housingImpact = {
@@ -1425,12 +1457,12 @@
                 }
             }
 
-            // Car relevance
+            // Car relevance - INCREASED POINTS + MORE KEYWORDS
             if (userProfile.car && userProfile.car !== 'Nein') {
-                const carKeywords = ['auto', 'verkehr', 'benzin', 'diesel', 'elektro', 'kfz', 'fahrverbot', 'parkplatz'];
+                const carKeywords = ['auto', 'verkehr', 'benzin', 'diesel', 'elektro', 'kfz', 'fahrverbot', 'parkplatz', 'fahrzeug', 'mobilität', 'sprit', 'tanken', 'laden', 'ladestationen'];
                 for (let keyword of carKeywords) {
                     if (lowerNews.includes(keyword)) {
-                        scorePoints += 10;
+                        scorePoints += 20;
                         analysis.reasons.push(`🚗 Relevant für Autobesitzer (${userProfile.car})`);
 
                         const carType = userProfile.car;
@@ -1455,15 +1487,15 @@
                 }
             }
 
-            // Age-specific relevance
+            // Age-specific relevance - INCREASED POINTS + MORE KEYWORDS
             if (userProfile.age) {
                 const ageKeywords = {
-                    '18-25': ['ausbildung', 'studium', 'uni', 'job', 'berufsstart'],
-                    '26-35': ['karriere', 'beruf', 'wohnung', 'familie'],
-                    '36-45': ['karriere', 'familie', 'immobilie', 'vorsorge'],
-                    '46-55': ['job', 'gesundheit', 'vorsorge', 'rente'],
-                    '56-65': ['rente', 'altersvorsorge', 'gesundheit'],
-                    '66+': ['rente', 'pension', 'gesundheit', 'pflege']
+                    '18-25': ['ausbildung', 'studium', 'uni', 'job', 'berufsstart', 'azubi', 'student', 'bafög', 'praktikum'],
+                    '26-35': ['karriere', 'beruf', 'wohnung', 'familie', 'gründung', 'aufstieg', 'gehalt'],
+                    '36-45': ['karriere', 'familie', 'immobilie', 'vorsorge', 'eigenheim', 'absicherung'],
+                    '46-55': ['job', 'gesundheit', 'vorsorge', 'rente', 'absicherung', 'vermögen'],
+                    '56-65': ['rente', 'altersvorsorge', 'gesundheit', 'ruhestand', 'pension'],
+                    '66+': ['rente', 'pension', 'gesundheit', 'pflege', 'senioren', 'rentner']
                 };
 
                 const ageImpacts = {
@@ -1478,7 +1510,7 @@
                 const keywords = ageKeywords[userProfile.age] || [];
                 for (let keyword of keywords) {
                     if (lowerNews.includes(keyword)) {
-                        scorePoints += 10;
+                        scorePoints += 20;
                         analysis.reasons.push(`👤 Altersrelevant für Gruppe ${userProfile.age}`);
                         analysis.detailedImpacts.push({
                             title: '👤 Lebensphase-Relevanz',
@@ -1493,10 +1525,10 @@
             // Cap score at 100
             analysis.score = Math.min(scorePoints, 100);
 
-            // Generate personal impact message
-            if (analysis.score >= 70) {
+            // Generate personal impact message - LOWERED THRESHOLDS
+            if (analysis.score >= 60) {
                 analysis.personalImpact = '🔥 FIRE - Diese Nachricht ist absolut krass für dich! Sie betrifft mehrere Aspekte deines Lebens direkt und wird wahrscheinlich konkrete Änderungen in deinem Alltag mit sich bringen. Check das aus!';
-            } else if (analysis.score >= 40) {
+            } else if (analysis.score >= 35) {
                 analysis.personalImpact = '🌶️ SPICY - Diese Nachricht hat ordentlich Würze für dich! Einige Aspekte könnten dich betreffen und es lohnt sich, die Entwicklung im Auge zu behalten.';
             } else if (analysis.score >= 15) {
                 analysis.personalImpact = '😴 MEH - Diese Nachricht ist eher lauwarm für dich. Es gibt einige Berührungspunkte zu deinem Leben, aber der direkte Einfluss ist begrenzt.';
@@ -1513,8 +1545,8 @@
                 });
             }
 
-            // Add general action item if score is high
-            if (analysis.score >= 70 && analysis.whatToDo.length === 0) {
+            // Add general action item if score is high - LOWERED THRESHOLD
+            if (analysis.score >= 60 && analysis.whatToDo.length === 0) {
                 analysis.whatToDo.push('⚡ Diese Nachricht ist hochrelevant - informiere dich weiter und handle proaktiv!');
             }
 
@@ -1738,7 +1770,7 @@
         }
 
         function displayRelevanceAnalysis(analysis, newsTitle = null) {
-            const scoreClass = analysis.score >= 70 ? 'high' : (analysis.score >= 40 ? 'medium' : 'low');
+            const scoreClass = analysis.score >= 60 ? 'high' : (analysis.score >= 35 ? 'medium' : 'low');
 
             const personalContextHTML = analysis.personalContext ? `
                 <div style="background: linear-gradient(135deg, rgba(0, 245, 255, 0.08) 0%, rgba(255, 0, 110, 0.08) 100%); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(0, 245, 255, 0.2);">
