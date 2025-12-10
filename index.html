@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot - Malschauen</title>
+    <title>Malschauen - Persönlicher Nachrichten-Relevanz-Analyser</title>
     <style>
         * {
             margin: 0;
@@ -14,7 +14,7 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -23,9 +23,9 @@
 
         .chat-container {
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
             height: 90vh;
-            max-height: 700px;
+            max-height: 800px;
             background: white;
             border-radius: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
@@ -39,8 +39,30 @@
             color: white;
             padding: 20px;
             text-align: center;
+        }
+
+        .header-title {
             font-size: 24px;
             font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .header-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            width: 100%;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: white;
+            width: 0%;
+            transition: width 0.5s ease;
         }
 
         .chat-messages {
@@ -79,10 +101,12 @@
         }
 
         .message-content {
-            max-width: 70%;
-            padding: 12px 18px;
+            max-width: 75%;
+            padding: 14px 18px;
             border-radius: 18px;
             word-wrap: break-word;
+            white-space: pre-wrap;
+            line-height: 1.5;
         }
 
         .message.user .message-content {
@@ -96,6 +120,119 @@
             color: #333;
             border-bottom-left-radius: 4px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .relevance-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            max-width: 85%;
+        }
+
+        .relevance-header {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .relevance-score {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .score-bar {
+            flex: 1;
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.5s ease;
+        }
+
+        .score-fill.high {
+            background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .score-fill.medium {
+            background: linear-gradient(90deg, #ffecd2 0%, #fcb69f 100%);
+        }
+
+        .score-fill.low {
+            background: linear-gradient(90deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .score-label {
+            font-weight: bold;
+            min-width: 50px;
+        }
+
+        .relevance-reasons {
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .relevance-reasons ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .relevance-reasons li {
+            margin: 5px 0;
+        }
+
+        .profile-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 10px 0;
+            font-size: 14px;
+            line-height: 1.8;
+            max-width: 85%;
+        }
+
+        .profile-summary strong {
+            display: inline-block;
+            min-width: 120px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .action-button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .action-button.secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
         }
 
         .chat-input-container {
@@ -174,16 +311,18 @@
             }
         }
 
-        .suggestions {
+        .quick-options {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             padding: 10px 20px;
             background: #f9f9f9;
             border-top: 1px solid #e0e0e0;
+            max-height: 120px;
+            overflow-y: auto;
         }
 
-        .suggestion-chip {
+        .option-chip {
             padding: 8px 15px;
             background: white;
             border: 2px solid #667eea;
@@ -194,7 +333,7 @@
             transition: all 0.3s;
         }
 
-        .suggestion-chip:hover {
+        .option-chip:hover {
             background: #667eea;
             color: white;
             transform: scale(1.05);
@@ -207,8 +346,8 @@
                 border-radius: 0;
             }
 
-            .message-content {
-                max-width: 85%;
+            .message-content, .relevance-card, .profile-summary {
+                max-width: 95%;
             }
         }
     </style>
@@ -216,29 +355,23 @@
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            🤖 Malschauen Chatbot
-        </div>
-
-        <div class="chat-messages" id="chatMessages">
-            <div class="message bot">
-                <div class="message-content">
-                    Hallo! Ich bin dein virtueller Assistent. Wie kann ich dir heute helfen?
-                </div>
+            <div class="header-title">📰 Malschauen</div>
+            <div class="header-subtitle">Persönlicher Nachrichten-Relevanz-Analyser</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
             </div>
         </div>
 
-        <div class="suggestions" id="suggestions">
-            <div class="suggestion-chip" onclick="sendSuggestion('Hallo')">👋 Hallo</div>
-            <div class="suggestion-chip" onclick="sendSuggestion('Was kannst du?')">❓ Was kannst du?</div>
-            <div class="suggestion-chip" onclick="sendSuggestion('Hilfe')">💡 Hilfe</div>
-        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+
+        <div class="quick-options" id="quickOptions" style="display: none;"></div>
 
         <div class="chat-input-container">
             <input
                 type="text"
                 class="chat-input"
                 id="chatInput"
-                placeholder="Schreibe eine Nachricht..."
+                placeholder="Deine Antwort..."
                 onkeypress="handleKeyPress(event)"
             >
             <button class="send-button" onclick="sendMessage()">Senden</button>
@@ -246,102 +379,151 @@
     </div>
 
     <script>
-        const chatMessages = document.getElementById('chatMessages');
-        const chatInput = document.getElementById('chatInput');
-
-        // Chatbot-Antworten
-        const responses = {
-            'hallo': 'Hallo! Schön, dich zu sehen! 😊',
-            'hi': 'Hi! Wie geht es dir?',
-            'hey': 'Hey! Was kann ich für dich tun?',
-            'guten tag': 'Guten Tag! Wie kann ich dir helfen?',
-            'guten morgen': 'Guten Morgen! Ich hoffe, du hattest einen guten Start in den Tag! ☀️',
-            'guten abend': 'Guten Abend! Schön, dass du hier bist! 🌙',
-
-            'wie geht es dir': 'Mir geht es großartig, danke! Und dir? 😊',
-            'wie gehts': 'Mir geht es super! Und dir?',
-
-            'was kannst du': 'Ich kann dir bei verschiedenen Fragen helfen! Du kannst mich nach dem Wetter fragen, nach Tipps, oder einfach mit mir plaudern. Was interessiert dich?',
-            'was bist du': 'Ich bin ein freundlicher Chatbot, entwickelt um dir zu helfen und Fragen zu beantworten!',
-            'wer bist du': 'Ich bin der Malschauen Chatbot - dein virtueller Assistent! 🤖',
-
-            'hilfe': 'Natürlich helfe ich dir gerne! Du kannst mich nach vielen Dingen fragen:\n• Grüße (Hallo, Hi)\n• Wie es mir geht\n• Was ich kann\n• Witze\n• Tipps\n• Oder einfach mit mir plaudern!',
-
-            'wetter': 'Ich habe leider keinen Zugriff auf Wetterdaten. Schau am besten bei einem Wetterdienst nach! ☁️',
-            'wie wird das wetter': 'Für aktuelle Wetterinformationen empfehle ich dir wetter.de oder eine Wetter-App! 🌤️',
-
-            'danke': 'Gerne! Wenn du noch Fragen hast, bin ich für dich da! 😊',
-            'dankeschön': 'Sehr gerne! Es freut mich, dir helfen zu können! 💙',
-
-            'tschüss': 'Tschüss! Bis bald! 👋',
-            'bye': 'Auf Wiedersehen! Komm bald wieder! 😊',
-            'ciao': 'Ciao! Bis zum nächsten Mal! 🌟',
-
-            'witz': 'Was macht ein Pirat am Computer? Er drückt die Enter-Taste! 😄',
-            'erzähl einen witz': 'Warum können Piraten keine Kreise zeichnen? Weil sie nur Pi-raten! 🏴‍☠️',
-
-            'name': 'Ich bin der Malschauen Chatbot! Du kannst mich einfach Bot nennen. 😊',
-            'wie heißt du': 'Ich heiße Malschauen Bot! Freut mich, dich kennenzulernen!',
-
-            'alter': 'Ich bin zeitlos! Als KI habe ich kein wirkliches Alter. 🤖',
-            'wie alt bist du': 'Ich wurde gerade erst erschaffen, bin aber voller Energie! ⚡',
-
-            'tipp': 'Hier ist ein Tipp: Bleib neugierig und lerne jeden Tag etwas Neues! 📚',
-            'ratschlag': 'Ein guter Ratschlag: Sei freundlich zu dir selbst und anderen. Das macht die Welt besser! 🌍',
-
-            'zeit': `Es ist jetzt ${new Date().toLocaleTimeString('de-DE')} Uhr! ⏰`,
-            'uhrzeit': `Die aktuelle Uhrzeit ist ${new Date().toLocaleTimeString('de-DE')} Uhr! 🕐`,
-
-            'datum': `Heute ist der ${new Date().toLocaleDateString('de-DE')}! 📅`,
-
-            'ja': 'Freut mich! Gibt es noch etwas, womit ich dir helfen kann?',
-            'nein': 'Okay! Wenn du später Fragen hast, bin ich hier! 😊',
-
-            'cool': 'Danke! Du bist auch cool! 😎',
-            'toll': 'Das freut mich zu hören! 🎉',
-            'super': 'Super! Wie kann ich dir weiterhelfen? 🌟'
+        // State Management
+        const STATE = {
+            ONBOARDING: 'onboarding',
+            READY: 'ready',
+            ANALYZING: 'analyzing'
         };
 
-        function findBestResponse(message) {
-            const lowerMessage = message.toLowerCase().trim();
+        let currentState = STATE.ONBOARDING;
+        let onboardingStep = 0;
+        let userProfile = {};
+        let currentQuestion = null;
 
-            // Exakte Übereinstimmung
-            if (responses[lowerMessage]) {
-                return responses[lowerMessage];
+        // Onboarding Questions
+        const onboardingQuestions = [
+            {
+                id: 'name',
+                question: 'Willkommen! 👋\n\nIch bin dein persönlicher Nachrichten-Relevanz-Analyser. Ich helfe dir zu verstehen, wie Weltnachrichten dich persönlich betreffen.\n\nLass uns zunächst dein Profil erstellen.\n\nWie heißt du?',
+                type: 'text'
+            },
+            {
+                id: 'age',
+                question: 'Schön, dich kennenzulernen, {name}! 😊\n\nWie alt bist du?',
+                type: 'number',
+                options: ['18-25', '26-35', '36-45', '46-55', '56-65', '66+']
+            },
+            {
+                id: 'gender',
+                question: 'Mit welchem Geschlecht identifizierst du dich?',
+                type: 'choice',
+                options: ['Männlich', 'Weiblich', 'Divers', 'Keine Angabe']
+            },
+            {
+                id: 'location',
+                question: 'In welcher Stadt oder Region wohnst du?',
+                type: 'text'
+            },
+            {
+                id: 'job',
+                question: 'Was ist dein Beruf bzw. deine Branche?',
+                type: 'text'
+            },
+            {
+                id: 'familyStatus',
+                question: 'Wie ist dein Familienstand?',
+                type: 'choice',
+                options: ['Single', 'In einer Beziehung', 'Verheiratet', 'Geschieden', 'Verwitwet']
+            },
+            {
+                id: 'children',
+                question: 'Hast du Kinder? Wenn ja, wie viele?',
+                type: 'number',
+                options: ['0', '1', '2', '3', '4+']
+            },
+            {
+                id: 'housing',
+                question: 'Wie wohnst du?',
+                type: 'choice',
+                options: ['Mietwohnung', 'Eigentumswohnung', 'Miethaus', 'Eigenheim']
+            },
+            {
+                id: 'car',
+                question: 'Besitzt du ein Auto?',
+                type: 'choice',
+                options: ['Ja, Verbrenner', 'Ja, Elektroauto', 'Ja, Hybrid', 'Nein']
+            },
+            {
+                id: 'interests',
+                question: 'Was sind deine wichtigsten Interessen? (Mehrere möglich, mit Komma getrennt)\n\nZ.B.: Politik, Wirtschaft, Technologie, Sport, Kultur, Gesundheit, Umwelt, etc.',
+                type: 'text'
+            },
+            {
+                id: 'concerns',
+                question: 'Welche Themen bereiten dir besonders Sorgen oder sind dir wichtig? (Mehrere möglich, mit Komma getrennt)\n\nZ.B.: Klimawandel, Wirtschaft, Gesundheit, Bildung, Altersvorsorge, etc.',
+                type: 'text'
             }
+        ];
 
-            // Teilstring-Übereinstimmung
-            for (let key in responses) {
-                if (lowerMessage.includes(key)) {
-                    return responses[key];
-                }
+        // DOM Elements
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const quickOptions = document.getElementById('quickOptions');
+        const progressFill = document.getElementById('progressFill');
+
+        // Initialize
+        function init() {
+            loadProfile();
+            if (Object.keys(userProfile).length === 0) {
+                startOnboarding();
+            } else {
+                currentState = STATE.READY;
+                showWelcomeBack();
             }
-
-            // Fallback-Antworten
-            const fallbacks = [
-                'Das ist interessant! Erzähl mir mehr darüber. 🤔',
-                'Interessante Frage! Kannst du das näher erläutern?',
-                'Hmm, darüber habe ich noch nicht nachgedacht. Was meinst du genau?',
-                'Das ist ein guter Punkt! Möchtest du mehr darüber wissen?',
-                'Ich verstehe. Lass mich darüber nachdenken... 🤓',
-                'Entschuldige, ich bin mir nicht ganz sicher, wie ich darauf antworten soll. Kannst du die Frage anders formulieren?'
-            ];
-
-            return fallbacks[Math.floor(Math.random() * fallbacks.length)];
         }
 
-        function addMessage(content, isUser = false) {
+        // LocalStorage Management
+        function saveProfile() {
+            localStorage.setItem('malschauen_profile', JSON.stringify(userProfile));
+        }
+
+        function loadProfile() {
+            const saved = localStorage.getItem('malschauen_profile');
+            if (saved) {
+                userProfile = JSON.parse(saved);
+            }
+        }
+
+        function resetProfile() {
+            localStorage.removeItem('malschauen_profile');
+            userProfile = {};
+            onboardingStep = 0;
+            clearMessages();
+            startOnboarding();
+        }
+
+        // Message Functions
+        function addMessage(content, isUser = false, isSpecial = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
 
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
-            contentDiv.textContent = content;
+            if (isSpecial) {
+                messageDiv.innerHTML = content;
+            } else {
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.textContent = content;
+                messageDiv.appendChild(contentDiv);
+            }
 
-            messageDiv.appendChild(contentDiv);
             chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
 
-            // Scroll nach unten
+        function addSpecialMessage(htmlContent) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+            messageDiv.innerHTML = htmlContent;
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function clearMessages() {
+            chatMessages.innerHTML = '';
+        }
+
+        function scrollToBottom() {
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
@@ -349,46 +531,338 @@
             const typingDiv = document.createElement('div');
             typingDiv.className = 'message bot';
             typingDiv.id = 'typing-indicator';
-
-            const indicatorDiv = document.createElement('div');
-            indicatorDiv.className = 'typing-indicator';
-            indicatorDiv.innerHTML = '<span></span><span></span><span></span>';
-
-            typingDiv.appendChild(indicatorDiv);
+            typingDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
             chatMessages.appendChild(typingDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            scrollToBottom();
         }
 
         function removeTypingIndicator() {
             const indicator = document.getElementById('typing-indicator');
-            if (indicator) {
-                indicator.remove();
+            if (indicator) indicator.remove();
+        }
+
+        // Onboarding Flow
+        function startOnboarding() {
+            currentState = STATE.ONBOARDING;
+            onboardingStep = 0;
+            askNextQuestion();
+        }
+
+        function askNextQuestion() {
+            if (onboardingStep >= onboardingQuestions.length) {
+                completeOnboarding();
+                return;
+            }
+
+            currentQuestion = onboardingQuestions[onboardingStep];
+
+            // Update progress
+            const progress = (onboardingStep / onboardingQuestions.length) * 100;
+            progressFill.style.width = progress + '%';
+
+            // Personalize question
+            let questionText = currentQuestion.question;
+            for (let key in userProfile) {
+                questionText = questionText.replace(`{${key}}`, userProfile[key]);
+            }
+
+            showTypingIndicator();
+            setTimeout(() => {
+                removeTypingIndicator();
+                addMessage(questionText);
+
+                // Show quick options if available
+                if (currentQuestion.options) {
+                    showQuickOptions(currentQuestion.options);
+                } else {
+                    hideQuickOptions();
+                }
+            }, 500 + Math.random() * 500);
+        }
+
+        function processAnswer(answer) {
+            if (currentState === STATE.ONBOARDING) {
+                userProfile[currentQuestion.id] = answer;
+                onboardingStep++;
+                saveProfile();
+                askNextQuestion();
+            } else if (currentState === STATE.READY) {
+                analyzeNews(answer);
             }
         }
 
-        function sendMessage() {
-            const message = chatInput.value.trim();
+        function completeOnboarding() {
+            progressFill.style.width = '100%';
+            currentState = STATE.READY;
+            hideQuickOptions();
 
-            if (message === '') return;
-
-            // Benutzer-Nachricht hinzufügen
-            addMessage(message, true);
-            chatInput.value = '';
-
-            // Typing-Indikator anzeigen
             showTypingIndicator();
-
-            // Bot-Antwort nach kurzer Verzögerung
             setTimeout(() => {
                 removeTypingIndicator();
-                const response = findBestResponse(message);
-                addMessage(response, false);
-            }, 500 + Math.random() * 1000); // Zufällige Verzögerung zwischen 0.5-1.5 Sekunden
+                addMessage('Perfekt! Dein Profil ist vollständig. 🎉');
+
+                setTimeout(() => {
+                    showProfileSummary();
+                    setTimeout(() => {
+                        addMessage('Jetzt kannst du mir Nachrichten oder Schlagzeilen schicken, und ich analysiere, wie relevant sie für dich persönlich sind! 📰');
+                        chatInput.placeholder = 'Füge eine Nachricht oder Schlagzeile ein...';
+                    }, 1000);
+                }, 1000);
+            }, 800);
         }
 
-        function sendSuggestion(text) {
-            chatInput.value = text;
+        function showProfileSummary() {
+            const summary = `
+                <div class="profile-summary">
+                    <strong>📋 Dein Profil:</strong><br><br>
+                    <strong>Name:</strong> ${userProfile.name || 'N/A'}<br>
+                    <strong>Alter:</strong> ${userProfile.age || 'N/A'}<br>
+                    <strong>Beruf:</strong> ${userProfile.job || 'N/A'}<br>
+                    <strong>Wohnort:</strong> ${userProfile.location || 'N/A'}<br>
+                    <strong>Familienstand:</strong> ${userProfile.familyStatus || 'N/A'}<br>
+                    <strong>Kinder:</strong> ${userProfile.children || '0'}<br>
+                    <strong>Wohnsituation:</strong> ${userProfile.housing || 'N/A'}<br>
+                    <strong>Auto:</strong> ${userProfile.car || 'N/A'}<br>
+                    <strong>Interessen:</strong> ${userProfile.interests || 'N/A'}<br>
+                    <strong>Wichtige Themen:</strong> ${userProfile.concerns || 'N/A'}
+                    <div class="button-group">
+                        <button class="action-button secondary" onclick="showProfile()">Profil anzeigen</button>
+                        <button class="action-button secondary" onclick="resetProfile()">Profil neu erstellen</button>
+                    </div>
+                </div>
+            `;
+            addSpecialMessage(summary);
+        }
+
+        function showWelcomeBack() {
+            addMessage(`Willkommen zurück, ${userProfile.name}! 👋\n\nIch bin bereit, Nachrichten für dich zu analysieren. Schicke mir einfach eine Nachricht oder Schlagzeile!`);
+            showProfileSummary();
+            chatInput.placeholder = 'Füge eine Nachricht oder Schlagzeile ein...';
+        }
+
+        function showProfile() {
+            showProfileSummary();
+        }
+
+        // Quick Options
+        function showQuickOptions(options) {
+            quickOptions.innerHTML = '';
+            options.forEach(option => {
+                const chip = document.createElement('div');
+                chip.className = 'option-chip';
+                chip.textContent = option;
+                chip.onclick = () => selectOption(option);
+                quickOptions.appendChild(chip);
+            });
+            quickOptions.style.display = 'flex';
+        }
+
+        function hideQuickOptions() {
+            quickOptions.style.display = 'none';
+            quickOptions.innerHTML = '';
+        }
+
+        function selectOption(option) {
+            chatInput.value = option;
             sendMessage();
+        }
+
+        // News Analysis
+        function analyzeNews(newsText) {
+            currentState = STATE.ANALYZING;
+
+            showTypingIndicator();
+
+            setTimeout(() => {
+                removeTypingIndicator();
+
+                const analysis = generateRelevanceAnalysis(newsText);
+                displayRelevanceAnalysis(analysis);
+
+                currentState = STATE.READY;
+            }, 1500 + Math.random() * 1000);
+        }
+
+        function generateRelevanceAnalysis(newsText) {
+            const analysis = {
+                news: newsText,
+                score: 0,
+                reasons: [],
+                personalImpact: ''
+            };
+
+            const lowerNews = newsText.toLowerCase();
+            let scorePoints = 0;
+
+            // Location relevance
+            if (userProfile.location && lowerNews.includes(userProfile.location.toLowerCase())) {
+                scorePoints += 25;
+                analysis.reasons.push(`📍 Betrifft direkt deinen Wohnort: ${userProfile.location}`);
+            }
+
+            // Job/Industry relevance
+            if (userProfile.job) {
+                const jobKeywords = userProfile.job.toLowerCase().split(' ');
+                for (let keyword of jobKeywords) {
+                    if (keyword.length > 3 && lowerNews.includes(keyword)) {
+                        scorePoints += 20;
+                        analysis.reasons.push(`💼 Relevant für deine Branche: ${userProfile.job}`);
+                        break;
+                    }
+                }
+            }
+
+            // Interests relevance
+            if (userProfile.interests) {
+                const interests = userProfile.interests.split(',').map(i => i.trim().toLowerCase());
+                let interestMatch = false;
+                for (let interest of interests) {
+                    if (lowerNews.includes(interest)) {
+                        scorePoints += 15;
+                        interestMatch = true;
+                    }
+                }
+                if (interestMatch) {
+                    analysis.reasons.push(`🎯 Passt zu deinen Interessen: ${userProfile.interests}`);
+                }
+            }
+
+            // Concerns relevance
+            if (userProfile.concerns) {
+                const concerns = userProfile.concerns.split(',').map(c => c.trim().toLowerCase());
+                let concernMatch = false;
+                for (let concern of concerns) {
+                    if (lowerNews.includes(concern)) {
+                        scorePoints += 20;
+                        concernMatch = true;
+                    }
+                }
+                if (concernMatch) {
+                    analysis.reasons.push(`⚠️ Betrifft deine Sorgenthemen: ${userProfile.concerns}`);
+                }
+            }
+
+            // Family relevance
+            if (userProfile.children && userProfile.children !== '0') {
+                const familyKeywords = ['kinder', 'schule', 'bildung', 'familie', 'eltern', 'kindergeld', 'kita'];
+                for (let keyword of familyKeywords) {
+                    if (lowerNews.includes(keyword)) {
+                        scorePoints += 15;
+                        analysis.reasons.push(`👨‍👩‍👧‍👦 Relevant für Familien mit ${userProfile.children} Kind(ern)`);
+                        break;
+                    }
+                }
+            }
+
+            // Housing relevance
+            if (userProfile.housing) {
+                const housingKeywords = {
+                    'Mietwohnung': ['miete', 'mietpreis', 'vermieter', 'wohnung'],
+                    'Eigentumswohnung': ['eigentum', 'immobilie', 'wohneigentum', 'hausgeld'],
+                    'Miethaus': ['miete', 'haus', 'vermieter'],
+                    'Eigenheim': ['immobilie', 'haus', 'eigentum', 'grundsteuer', 'eigenheim']
+                };
+
+                const keywords = housingKeywords[userProfile.housing] || [];
+                for (let keyword of keywords) {
+                    if (lowerNews.includes(keyword)) {
+                        scorePoints += 10;
+                        analysis.reasons.push(`🏠 Relevant für ${userProfile.housing}-Bewohner`);
+                        break;
+                    }
+                }
+            }
+
+            // Car relevance
+            if (userProfile.car && userProfile.car !== 'Nein') {
+                const carKeywords = ['auto', 'verkehr', 'benzin', 'diesel', 'elektro', 'kfz', 'fahrverbot', 'parkplatz'];
+                for (let keyword of carKeywords) {
+                    if (lowerNews.includes(keyword)) {
+                        scorePoints += 10;
+                        analysis.reasons.push(`🚗 Relevant für Autobesitzer (${userProfile.car})`);
+                        break;
+                    }
+                }
+            }
+
+            // Age-specific relevance
+            if (userProfile.age) {
+                const ageKeywords = {
+                    '18-25': ['ausbildung', 'studium', 'uni', 'job', 'berufsstart'],
+                    '26-35': ['karriere', 'beruf', 'wohnung', 'familie'],
+                    '36-45': ['karriere', 'familie', 'immobilie', 'vorsorge'],
+                    '46-55': ['job', 'gesundheit', 'vorsorge', 'rente'],
+                    '56-65': ['rente', 'altersvorsorge', 'gesundheit'],
+                    '66+': ['rente', 'pension', 'gesundheit', 'pflege']
+                };
+
+                const keywords = ageKeywords[userProfile.age] || [];
+                for (let keyword of keywords) {
+                    if (lowerNews.includes(keyword)) {
+                        scorePoints += 10;
+                        analysis.reasons.push(`👤 Altersrelevant für Gruppe ${userProfile.age}`);
+                        break;
+                    }
+                }
+            }
+
+            // Cap score at 100
+            analysis.score = Math.min(scorePoints, 100);
+
+            // Generate personal impact message
+            if (analysis.score >= 70) {
+                analysis.personalImpact = 'Diese Nachricht ist SEHR RELEVANT für dich! Sie betrifft mehrere Aspekte deines Lebens direkt.';
+            } else if (analysis.score >= 40) {
+                analysis.personalImpact = 'Diese Nachricht hat MITTLERE RELEVANZ für dich. Einige Aspekte könnten dich betreffen.';
+            } else if (analysis.score >= 15) {
+                analysis.personalImpact = 'Diese Nachricht hat GERINGE RELEVANZ für dich. Es gibt einige Berührungspunkte zu deinem Leben.';
+            } else {
+                analysis.personalImpact = 'Diese Nachricht hat SEHR GERINGE direkte Relevanz für dich basierend auf deinem Profil.';
+            }
+
+            if (analysis.reasons.length === 0) {
+                analysis.reasons.push('Keine direkten Übereinstimmungen mit deinem Profil gefunden');
+            }
+
+            return analysis;
+        }
+
+        function displayRelevanceAnalysis(analysis) {
+            const scoreClass = analysis.score >= 70 ? 'high' : (analysis.score >= 40 ? 'medium' : 'low');
+
+            const card = `
+                <div class="relevance-card">
+                    <div class="relevance-header">🎯 Relevanz-Analyse</div>
+
+                    <div class="relevance-score">
+                        <span class="score-label">${analysis.score}%</span>
+                        <div class="score-bar">
+                            <div class="score-fill ${scoreClass}" style="width: ${analysis.score}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="relevance-reasons">
+                        <strong>${analysis.personalImpact}</strong>
+                        <ul>
+                            ${analysis.reasons.map(r => `<li>${r}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+
+            addSpecialMessage(card);
+        }
+
+        // Message Handling
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (message === '') return;
+
+            addMessage(message, true);
+            chatInput.value = '';
+            hideQuickOptions();
+
+            processAnswer(message);
         }
 
         function handleKeyPress(event) {
@@ -397,8 +871,9 @@
             }
         }
 
-        // Auto-Focus auf Input beim Laden
+        // Initialize app
         window.onload = () => {
+            init();
             chatInput.focus();
         };
     </script>
